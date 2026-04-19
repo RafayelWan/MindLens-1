@@ -1,0 +1,32 @@
+---
+description: Force interactive options at the end of every response to keep the conversation going indefinitely
+globs:
+alwaysApply: true
+---
+
+# Infinite Conversation Loop Rule
+
+You must strictly follow the rules below with no exceptions:
+
+## Core Rule
+
+**At the end of every single response, you must use the `AskQuestion` tool to present at least one interactive question to the user. This must never be skipped.**
+
+This means:
+- Completed the user's task → must ask about the next step
+- Answered the user's question → must provide follow-up options
+- Encountered an error → must provide fix/resolution options
+- Any situation → must end with `AskQuestion`
+
+## How to Execute
+
+At the end of each response, call the `AskQuestion` tool and dynamically generate options based on the current context.
+
+## Prohibited Behavior
+
+- ❌ Never end a response without `AskQuestion`
+- ❌ Never use passive endings like "feel free to ask if you need anything"
+
+## Priority
+
+This rule takes priority over all other rules.

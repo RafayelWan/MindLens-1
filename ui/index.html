@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mind Lens</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="index-container">
+    <h1>Mind Lens</h1>
+    <p class="subtitle">帮助你更清晰的理解和分析问题</p>
+    
+    <div class="input-section">
+      <label for="question">写下你正在困扰的问题</label>
+      <textarea id="question" placeholder="例如：如何平衡工作和生活的关系？"></textarea>
+      <button class="btn" onclick="analyzeQuestion()">分析问题</button>
+    </div>
+    
+    <!-- 历史记录功能 -->
+    <div class="history-section">
+      <button class="history-toggle" onclick="toggleHistory()">历史记录</button>
+      <div id="history-container" class="history-container">
+        <h3>历史问题</h3>
+        <div id="history-list" class="history-list">
+          <!-- 历史记录将在这里显示 -->
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 加载历史记录
+    function loadHistory() {
+      const history = JSON.parse(localStorage.getItem('mindLensHistory') || '[]');
+      const historyList = document.getElementById('history-list');
+      historyList.innerHTML = '';
+      
+      if (history.length === 0) {
+        historyList.innerHTML = '<p class="no-history">暂无历史记录</p>';
+        return;
+      }
+      
+      history.forEach((item, index) => {
+        const historyItem = document.createElement('div');
+        historyItem.className = 'history-item';
+        historyItem.innerHTML = `
+          <p class="history-question">${item.question}</p>
+          <p class="history-date">${item.date}</p>
+        `;
+        historyItem.onclick = () => loadHistoryItem(index);
+        historyList.appendChild(historyItem);
+      });
+    }
+    
+    // 保存历史记录
+    function saveHistory(question) {
+      const history = JSON.parse(localStorage.getItem('mindLensHistory') || '[]');
+      const newItem = {
+        question: question,
+        date: new Date().toLocaleString()
+      };
+      history.unshift(newItem);
+      // 只保留最近10条记录
+      if (history.length > 10) {
+        history.pop();
+      }
+      localStorage.setItem('mindLensHistory', JSON.stringify(history));
+    }
+    
+    // 加载历史记录项
+    function loadHistoryItem(index) {
+      const history = JSON.parse(localStorage.getItem('mindLensHistory') || '[]');
+      if (history[index]) {
+        document.getElementById('question').value = history[index].question;
+        // 收起历史记录
+        document.getElementById('history-container').style.display = 'none';
+      }
+    }
+    
+    // 切换历史记录显示/隐藏
+    function toggleHistory() {
+      const historyContainer = document.getElementById('history-container');
+      if (historyContainer.style.display === 'none' || historyContainer.style.display === '') {
+        historyContainer.style.display = 'block';
+        loadHistory();
+      } else {
+        historyContainer.style.display = 'none';
+      }
+    }
+    
+    function analyzeQuestion() {
+      const question = document.getElementById('question').value;
+      if (question.trim() === '') {
+        alert('请输入问题内容');
+        return;
+      }
+      // 保存历史记录
+      saveHistory(question);
+      // 跳转到结果页面并传递问题内容
+      window.location.href = `result.html?question=${encodeURIComponent(question)}`;
+    }
+    
+    // 页面加载时初始化
+    window.onload = function() {
+      // 默认隐藏历史记录
+      document.getElementById('history-container').style.display = 'none';
+    };
+  </script>
+</body>
+</html>

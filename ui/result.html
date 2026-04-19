@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分析结果 - Mind Lens</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Mind Lens - 分析结果</h1>
+    
+    <div class="workspace">
+      <!-- 左侧：问题上下文面板 -->
+      <div class="left-panel">
+        <div class="question-display">
+          <h2>你的问题：</h2>
+          <p id="displayQuestion"></p>
+        </div>
+        <a href="index.html" class="back-link">重新输入问题</a>
+      </div>
+      
+      <!-- 右侧：AI 分析结果区域 -->
+      <div class="right-panel">
+        <div class="result-section">
+          <h2>分析结果</h2>
+          <div id="analysis-container" class="analysis-container">
+            <!-- 分析结果将在这里逐条生成 -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 从URL获取问题参数并显示
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+    
+    function addAnalysisCard(title, content, delay) {
+      setTimeout(() => {
+        const container = document.getElementById('analysis-container');
+        const card = document.createElement('div');
+        card.className = 'analysis-item';
+        card.innerHTML = `
+          <h3>${title}</h3>
+          <p>${content}</p>
+        `;
+        container.appendChild(card);
+        
+        // 添加动画效果
+        setTimeout(() => {
+          card.classList.add('show');
+          // 自动滚动到最新卡片
+          card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 10);
+      }, delay);
+    }
+    
+    // 调用 AI 分析问题
+    async function callAI(question) {
+      const analysisPrompt = `你是 Mind Lens，一个问题分析AI，请严格按以下结构输出：
+
+1. 表层问题
+2. 隐含假设
+3. 信息缺失
+4. 认知盲点
+5. 建议
+
+要求：
+- 简洁
+- 分点输出
+- 每项2-4行
+- 不要输出多余内容
+
+问题：${question}`;
+
+      try {
+        // 使用 Trae IDE 提供的 AI 接口
+        const response = await fetch('https://trae-api-cn.mchost.guru/api/ide/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'gpt-3.5-turbo',
+            messages: [
+              { role: 'system', content: '你是 Mind Lens，一个问题分析AI' },
+              { role: 'user', content: analysisPrompt }
+            ],
+            temperature: 0.7
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('AI 调用失败');
+        }
+
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
+        return aiResponse;
+      } catch (error) {
+        console.error('AI 调用错误:', error);
+        // 返回默认分析结果作为 fallback
+        return `1. 表层问题
+这是对用户输入问题的表层描述和理解，帮助你明确问题的基本含义和范围。
+
+2. 隐含假设
+分析问题中可能存在的隐含假设和前提条件，帮助你识别潜在的思维局限。
+
+3. 信息缺失
+指出问题描述中可能缺少的关键信息，帮助你完善问题的理解。
+
+4. 认知盲点
+分析可能存在的认知偏见或盲点，帮助你从不同角度思考问题。
+
+5. 建议
+基于分析提供的具体建议和改进方向，帮助你找到解决问题的思路。`;
+      }
+    }
+
+    // 解析 AI 响应并生成分析卡片
+    function parseAIResponse(response) {
+      const sections = response.split('\n\n');
+      const analysisData = [];
+
+      sections.forEach(section => {
+        const lines = section.split('\n');
+        if (lines.length > 0) {
+          const title = lines[0].replace(/^\d+\.\s*/, '');
+          const content = lines.slice(1).join('\n').trim();
+          if (title && content) {
+            analysisData.push({ title, content });
+          }
+        }
+      });
+
+      return analysisData;
+    }
+
+    document.addEventListener('DOMContentLoaded', async function() {
+      const question = getQueryParam('question');
+      if (question) {
+        document.getElementById('displayQuestion').textContent = decodeURIComponent(question);
+        
+        // 显示加载状态
+        const container = document.getElementById('analysis-container');
+        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #888;">正在分析...请稍候</div>';
+        
+        // 调用 AI 分析
+        const aiResponse = await callAI(decodeURIComponent(question));
+        const analysisData = parseAIResponse(aiResponse);
+        
+        // 清空容器并显示分析结果
+        container.innerHTML = '';
+        
+        // 逐步生成分析卡片
+        analysisData.forEach((item, index) => {
+          addAnalysisCard(item.title, item.content, 500 + index * 500);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
