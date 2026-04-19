@@ -1,4 +1,4 @@
-# DAWN Demo
+# MindLens
 
 LLM 聊天工具 + Mind Lens 问题分析网页，支持终端和网页两种交互方式。
 
