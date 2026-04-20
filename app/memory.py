@@ -1,6 +1,6 @@
 import json
 import os
-from config import MEMORY_FILE, MAX_MEMORY_ROUNDS
+from .config import MEMORY_FILE, MAX_MEMORY_ROUNDS
 
 
 def load_memory() -> list[dict]:

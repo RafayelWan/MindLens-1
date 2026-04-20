@@ -2,8 +2,8 @@
 
 from typing import Generator
 from openai import OpenAI
-from config import API_KEY, BASE_URL, MODEL, TEMPERATURE, TOP_P, load_system_prompt
-from memory import load_memory, append_to_memory
+from .config import API_KEY, BASE_URL, MODEL, TEMPERATURE, TOP_P, load_system_prompt
+from .memory import load_memory, append_to_memory
 
 
 def create_client() -> OpenAI:

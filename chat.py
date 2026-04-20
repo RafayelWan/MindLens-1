@@ -1,6 +1,6 @@
-from config import MODEL, BASE_URL, list_prompts
-from memory import save_memory
-from llm import create_client, chat_stream
+from app.config import MODEL, BASE_URL, list_prompts
+from app.memory import save_memory
+from app.llm import create_client, chat_stream
 
 
 def show_help():
@@ -51,7 +51,7 @@ def main():
             continue
 
         if lower.startswith("prompt "):
-            from config import load_system_prompt
+            from app.config import load_system_prompt
             name = user_input[7:].strip()
             test = load_system_prompt(name)
             if test == "You are a helpful assistant." and name != "default":

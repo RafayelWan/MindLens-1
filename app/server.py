@@ -3,8 +3,8 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from llm import create_client, chat_sync, chat_stream
-from memory import load_memory, save_memory
+from .llm import create_client, chat_sync, chat_stream
+from .memory import load_memory, save_memory
 
 app = FastAPI(title="DAWN Demo API")
 
@@ -46,8 +46,3 @@ async def api_memory():
 
 
 app.mount("/", StaticFiles(directory="ui", html=True), name="ui")
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
