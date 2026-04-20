@@ -28,9 +28,9 @@ from app.config import API_KEY, BASE_URL, MODEL, TEMPERATURE, TOP_P
 
 # ── 配置 ──────────────────────────────────────────────────
 
-EVAL_MODEL = os.getenv("MINDLENS_EVAL_MODEL", MODEL)
-EVAL_BASE_URL = os.getenv("MINDLENS_EVAL_BASE_URL", BASE_URL)
-EVAL_API_KEY = os.getenv("MINDLENS_EVAL_API_KEY", API_KEY)
+EVAL_MODEL = os.getenv("EVAL_MODEL", MODEL)
+EVAL_BASE_URL = os.getenv("EVAL_BASE_URL", BASE_URL)
+EVAL_API_KEY = os.getenv("EVAL_API_KEY", API_KEY)
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "results")
 REPLIES_FILE = os.path.join(OUTPUT_DIR, "replies.json")
@@ -163,11 +163,22 @@ def call_llm(client, system_prompt, user_message, model=None, temperature=None):
         temperature=temperature if temperature is not None else TEMPERATURE,
         top_p=TOP_P,
     )
-    return resp.choices[0].message.content, {
-        "prompt_tokens": resp.usage.prompt_tokens,
-        "completion_tokens": resp.usage.completion_tokens,
-        "total_tokens": resp.usage.total_tokens,
-    }
+
+    if isinstance(resp, str):
+        return resp, {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+    if hasattr(resp, "choices"):
+        content = resp.choices[0].message.content
+        usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        if resp.usage:
+            usage = {
+                "prompt_tokens": resp.usage.prompt_tokens or 0,
+                "completion_tokens": resp.usage.completion_tokens or 0,
+                "total_tokens": resp.usage.total_tokens or 0,
+            }
+        return content, usage
+
+    raise ValueError(f"Unexpected API response type: {type(resp)}")
 
 def load_json(path):
     if os.path.exists(path):
