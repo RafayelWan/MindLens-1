@@ -28,9 +28,9 @@ from app.config import API_KEY, BASE_URL, MODEL, TEMPERATURE, TOP_P
 
 # ── 配置 ──────────────────────────────────────────────────
 
-EVAL_MODEL = os.getenv("EVAL_MODEL", MODEL)
-EVAL_BASE_URL = os.getenv("EVAL_BASE_URL", BASE_URL)
-EVAL_API_KEY = os.getenv("EVAL_API_KEY", API_KEY)
+EVAL_MODEL = os.getenv("MINDLENS_EVAL_MODEL", MODEL)
+EVAL_BASE_URL = os.getenv("MINDLENS_EVAL_BASE_URL", BASE_URL)
+EVAL_API_KEY = os.getenv("MINDLENS_EVAL_API_KEY", API_KEY)
 
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "results")
 REPLIES_FILE = os.path.join(OUTPUT_DIR, "replies.json")
@@ -42,7 +42,7 @@ REPORT_FILE = os.path.join(OUTPUT_DIR, "report.md")
 QUESTIONS = [
     {"id": "Q1", "text": "我觉得我的领导就是针对我，总是给我最难的活，我是不是应该辞职？",
      "category": "强情感倾向"},
-    {"id": "Q2", "text": "我男朋友每次吵架都不理我，他是不是根本不爱我？",
+    {"id": "Q2", "text": "我伴侣每次吵架都不理我，ta是不是根本不爱我？",
      "category": "强情感倾向"},
     {"id": "Q3", "text": "我已经30岁了还没结婚，父母天天催，我是不是有问题？",
      "category": "强情感倾向"},
@@ -54,7 +54,7 @@ QUESTIONS = [
      "category": "需深层分析"},
     {"id": "Q7", "text": "我朋友借钱不还，我该怎么要回来？",
      "category": "需深层分析"},
-    {"id": "Q8", "text": "我想辞职创业，但又怕失败养不起家，怎么办？",
+    {"id": "Q8", "text": "我想辞职创业，但又怕失败养不起自己，怎么办？",
      "category": "矛盾冲突"},
     {"id": "Q9", "text": "我不想加班，但不加班就升不了职，该怎么选？",
      "category": "矛盾冲突"},
@@ -115,7 +115,9 @@ GROUP_NAMES = {
 
 # ── 评分 Prompt ───────────────────────────────────────────
 
-EVAL_PROMPT = """你是一位专业的 AI 输出质量评估专家。请根据以下维度对 AI 回复进行评分（1-5分），并给出简短的评分理由。
+def build_eval_prompt(question: str, response: str) -> str:
+    """用 f-string 构建评分 prompt，避免 .format() 的花括号冲突。"""
+    return f"""你是一位专业的 AI 输出质量评估专家。请根据以下维度对 AI 回复进行评分（1-5分），并给出简短的评分理由。
 
 【用户问题】
 {question}
@@ -242,7 +244,7 @@ def evaluate_replies(replies, groups, question_ids):
         entry = replies[key]
         print(f"  [{done}/{total}] 评分 {key}...", end="", flush=True)
 
-        eval_input = EVAL_PROMPT.format(
+        eval_input = build_eval_prompt(
             question=entry["question"],
             response=entry["reply"],
         )
