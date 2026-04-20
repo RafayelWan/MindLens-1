@@ -2,3 +2,5 @@
 memory.json
 __pycache__/
 *.pyc
+.cursor/
+DevLog.md
