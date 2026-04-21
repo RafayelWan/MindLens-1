@@ -7,29 +7,28 @@
 ## 项目结构
 
 ```
-├── app/                    # 后端核心模块
+├── app/                     # 后端核心模块
 │   ├── __init__.py
-│   ├── config.py           # 配置加载（.env + prompt 文件）
-│   ├── llm.py              # LLM 调用层（构建消息、API 调用、记忆管理）
-│   ├── analysis.py         # 多轮分析业务逻辑（追问/轮次控制/JSON解析）
-│   ├── memory.py           # 对话记忆管理（JSON 读写、自动裁剪）
-│   └── server.py           # FastAPI 路由层（HTTP API + 静态文件托管）
-├── prompts/                # System Prompt
-│   ├── default.txt         # 默认助手
-│   └── mind_lens.txt       # Mind Lens 分析 prompt（含心理学框架）
-├── rag/                    # RAG 知识库素材
-│   ├── framework.md        # 阿德勒心理学分析框架
+│   ├── config.py            # 配置加载（.env + prompt 文件）
+│   ├── llm.py               # LLM 调用层（构建消息、API 调用、记忆管理）
+│   ├── analysis.py          # 多轮分析业务逻辑（追问/轮次控制/JSON解析）
+│   ├── memory.py            # 对话记忆管理（JSON 读写、自动裁剪）
+│   └── server.py            # FastAPI 路由层（HTTP API + 静态文件托管）
+├── prompts/                 # System Prompt
+│   └── mind_lens.txt        # Mind Lens 分析 prompt（含心理学框架+追问逻辑）
+├── rag/                     # RAG 知识库素材
+│   ├── framework.md         # 阿德勒心理学分析框架
 │   ├── analysis-template.md # 六步分析模板
-│   └── case-examples.md    # 典型分析案例
-├── ui/                     # 前端页面
-│   ├── index.html          # 输入页
-│   ├── result.html         # 分析结果页
-│   └── styles.css          # 样式
-├── chat.py                 # 终端聊天入口
-├── run_server.py           # 网页服务启动入口
-├── test_analysis.py        # 多轮分析终端测试脚本
-├── requirements.txt        # Python 依赖
-└── .env.example            # 环境变量模板
+│   └── case-examples.md     # 典型分析案例
+├── ui/                      # 前端页面
+│   ├── index.html           # 输入页
+│   ├── result.html          # 分析结果页
+│   └── styles.css           # 样式
+├── chat.py                  # 终端聊天入口
+├── run_server.py            # 网页服务启动入口
+├── test_analysis.py         # 多轮分析终端测试脚本
+├── requirements.txt         # Python 依赖
+└── .env.example             # 环境变量模板
 ```
 
 ## 快速开始
