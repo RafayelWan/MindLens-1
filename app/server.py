@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from .llm import create_client, chat_sync, chat_stream
 from .memory import load_memory, save_memory
+from .analysis import start_analysis, continue_analysis
 
 app = FastAPI(title="DAWN Demo API")
 
@@ -17,6 +18,10 @@ class ChatRequest(BaseModel):
     stream: bool = True
 
 
+class AnalysisStartRequest(BaseModel):
+    question: str
+
+
 @app.post("/api/chat")
 async def api_chat(req: ChatRequest):
     if req.stream:
@@ -26,6 +31,18 @@ async def api_chat(req: ChatRequest):
         )
     reply = chat_sync(client, req.message, req.prompt_name)
     return {"reply": reply}
+
+
+@app.post("/api/analysis/start")
+async def api_analysis_start(req: AnalysisStartRequest):
+    """Start a new analysis session: clear memory, send first message, return parsed JSON."""
+    return start_analysis(client, req.question)
+
+
+@app.post("/api/analysis/reply")
+async def api_analysis_reply(req: ChatRequest):
+    """Continue an ongoing analysis session, return parsed JSON."""
+    return continue_analysis(client, req.message)
 
 
 async def _sse_wrapper(user_input: str, prompt_name: str):
