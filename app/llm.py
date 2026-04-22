@@ -1,6 +1,5 @@
-"""LLM 核心层：构建消息、调用 API、管理记忆。chat.py 和 server.py 共用此模块。"""
+"""LLM 核心层：构建消息、调用 API、管理记忆。"""
 
-from typing import Generator
 from openai import OpenAI
 from .config import API_KEY, BASE_URL, MODEL, TEMPERATURE, TOP_P, load_system_prompt
 from .memory import load_memory, append_to_memory
@@ -37,32 +36,3 @@ def chat_sync(client: OpenAI, user_input: str, prompt_name: str = "default", mod
     append_to_memory("user", user_input)
     append_to_memory("assistant", reply)
     return reply
-
-
-def chat_stream(client: OpenAI, user_input: str, prompt_name: str = "default", model: str = None) -> Generator[str, None, str]:
-    """流式生成回复，yield 每个文本片段，最终 return 完整回复。"""
-    messages = build_messages(user_input, prompt_name)
-    use_model = model or MODEL
-
-    stream = client.chat.completions.create(
-        model=use_model, messages=messages,
-        temperature=TEMPERATURE, top_p=TOP_P,
-        stream=True,
-        stream_options={"include_usage": True},
-    )
-
-    full_reply = []
-    usage = None
-
-    for chunk in stream:
-        if chunk.usage:
-            usage = chunk.usage
-        if chunk.choices and chunk.choices[0].delta.content:
-            text = chunk.choices[0].delta.content
-            full_reply.append(text)
-            yield text
-
-    reply = "".join(full_reply)
-    append_to_memory("user", user_input)
-    append_to_memory("assistant", reply)
-    return reply, usage

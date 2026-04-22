@@ -282,11 +282,7 @@
             headers: {
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ 
-              message: reply, 
-              prompt_name: 'mind_lens', 
-              stream: false 
-            })
+            body: JSON.stringify({ message: reply })
           });
           
           if (response.status === 401) {

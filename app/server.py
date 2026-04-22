@@ -1,15 +1,14 @@
-import json
 import logging
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from openai import OpenAI, APIError
+from openai import APIError
 
-from .llm import chat_sync, chat_stream
+from .llm import chat_sync
 from .memory import load_memory, save_memory
 from .analysis import start_analysis, continue_analysis
-from .session import create_session, get_client, get_session
+from .session import create_session, get_session
 
 logger = logging.getLogger(__name__)
 
@@ -35,14 +34,12 @@ class ApiConfigRequest(BaseModel):
     model: str = "gpt-4o"
 
 
-class ChatRequest(BaseModel):
-    message: str
-    prompt_name: str = "default"
-    stream: bool = True
-
-
 class AnalysisStartRequest(BaseModel):
     question: str
+
+
+class AnalysisReplyRequest(BaseModel):
+    message: str
 
 
 @app.post("/api/config")
@@ -70,25 +67,6 @@ async def api_config_status(request: Request):
     return {"configured": False}
 
 
-@app.post("/api/chat")
-async def api_chat(req: ChatRequest, request: Request):
-    session = _require_session(request)
-    try:
-        if req.stream:
-            return StreamingResponse(
-                _sse_wrapper(session.client, req.message, req.prompt_name, session.model),
-                media_type="text/event-stream",
-            )
-        reply = chat_sync(session.client, req.message, req.prompt_name, model=session.model)
-        return {"reply": reply}
-    except APIError as e:
-        logger.exception("LLM API error")
-        return JSONResponse(status_code=502, content={"error": f"LLM 服务返回错误: {e.message}"})
-    except Exception as e:
-        logger.exception("Unexpected error in chat")
-        return JSONResponse(status_code=500, content={"error": f"服务器内部错误: {str(e)}"})
-
-
 @app.post("/api/analysis/start")
 async def api_analysis_start(req: AnalysisStartRequest, request: Request):
     """Start a new analysis session: clear memory, send first message, return parsed JSON."""
@@ -104,7 +82,7 @@ async def api_analysis_start(req: AnalysisStartRequest, request: Request):
 
 
 @app.post("/api/analysis/reply")
-async def api_analysis_reply(req: ChatRequest, request: Request):
+async def api_analysis_reply(req: AnalysisReplyRequest, request: Request):
     """Continue an ongoing analysis session, return parsed JSON."""
     session = _require_session(request)
     try:
@@ -115,12 +93,6 @@ async def api_analysis_reply(req: ChatRequest, request: Request):
     except Exception as e:
         logger.exception("Unexpected error in analysis reply")
         return JSONResponse(status_code=500, content={"error": f"服务器内部错误: {str(e)}"})
-
-
-async def _sse_wrapper(client: OpenAI, user_input: str, prompt_name: str, model: str):
-    for text in chat_stream(client, user_input, prompt_name, model=model):
-        yield f"data: {json.dumps({'text': text}, ensure_ascii=False)}\n\n"
-    yield f"data: {json.dumps({'done': True})}\n\n"
 
 
 @app.post("/api/clear")
