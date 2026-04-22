@@ -97,27 +97,63 @@
     }
     
     // 更新卡片
-    function updateCards(cards) {
+    function updateCards(data) {
       const container = document.getElementById('analysis-container');
-      container.innerHTML = '';
       
-      const cardTitles = ['表层问题', '隐含假设', '信息缺失', '认知盲点', '建议'];
+      // 定义卡片数据映射
+      const cardData = [
+        { id: 'card-surface', title: '表层问题', content: data.cards?.surface },
+        { id: 'card-assumption', title: '隐含假设', content: data.cards?.assumption },
+        { id: 'card-info-gap', title: '信息缺失', content: data.cards?.info_gap },
+        { id: 'card-blind-spot', title: '认知盲点', content: data.cards?.blind_spot },
+        { id: 'card-suggestion', title: '最终建议', content: data.cards?.suggestion }
+      ];
       
-      cards.forEach((card, index) => {
-        const cardElement = document.createElement('div');
-        const isLocked = index === 4 && !card.ready_for_suggestion;
-        cardElement.className = `analysis-item ${isLocked ? 'locked' : ''}`;
-        cardElement.innerHTML = `
-          <h3>${cardTitles[index]}</h3>
-          <p>${card.content}</p>
-        `;
-        container.appendChild(cardElement);
-        
-        // 添加动画效果
-        setTimeout(() => {
-          cardElement.classList.add('show');
-        }, 10);
-      });
+      // 检查容器是否已有卡片
+      const existingCards = container.querySelectorAll('.analysis-item');
+      
+      if (existingCards.length === 0) {
+        // 如果没有卡片，创建新卡片
+        cardData.forEach((card, index) => {
+          const cardElement = document.createElement('div');
+          const isLocked = index === 4;
+          cardElement.id = card.id;
+          cardElement.className = `analysis-item ${isLocked ? 'locked' : ''}`;
+          cardElement.innerHTML = `
+            <h3>${card.title}</h3>
+            <p>${card.content || ''}</p>
+          `;
+          container.appendChild(cardElement);
+          
+          // 添加动画效果
+          setTimeout(() => {
+            cardElement.classList.add('show');
+          }, 10);
+        });
+      } else {
+        // 如果已有卡片，更新内容
+        cardData.forEach((card, index) => {
+          const cardElement = existingCards[index];
+          if (cardElement) {
+            // 只更新非null的内容
+            if (card.content !== null && card.content !== undefined) {
+              const pElement = cardElement.querySelector('p');
+              if (pElement) {
+                pElement.textContent = card.content;
+              }
+            }
+            
+            // 处理建议卡片的解锁
+            if (index === 4) {
+              if (data.ready_for_suggestion === true && card.content) {
+                cardElement.classList.remove('locked');
+              } else {
+                cardElement.classList.add('locked');
+              }
+            }
+          }
+        });
+      }
     }
     
     // 页面初始化
@@ -157,18 +193,7 @@
           hideStatusMessage();
           
           // 更新卡片
-          if (data.cards) {
-            updateCards(data.cards);
-          } else {
-            // 兼容旧格式
-            updateCards([
-              { content: data.surface_question, ready_for_suggestion: false },
-              { content: data.implicit_assumptions, ready_for_suggestion: false },
-              { content: data.missing_information, ready_for_suggestion: false },
-              { content: data.cognitive_blindspots, ready_for_suggestion: false },
-              { content: data.suggestions, ready_for_suggestion: data.ready_for_suggestion }
-            ]);
-          }
+          updateCards(data);
           
           // 处理追问
           if (data.follow_up) {
@@ -191,13 +216,16 @@
           scrollToBottom();
           
           // 显示默认分析结果
-          updateCards([
-            { content: '这是对用户输入问题的表层描述和理解，帮助你明确问题的基本含义和范围。', ready_for_suggestion: false },
-            { content: '分析问题中可能存在的隐含假设和前提条件，帮助你识别潜在的思维局限。', ready_for_suggestion: false },
-            { content: '指出问题描述中可能缺少的关键信息，帮助你完善问题的理解。', ready_for_suggestion: false },
-            { content: '分析可能存在的认知偏见或盲点，帮助你从不同角度思考问题。', ready_for_suggestion: false },
-            { content: '基于分析提供的具体建议和改进方向，帮助你找到解决问题的思路。', ready_for_suggestion: false }
-          ]);
+          updateCards({
+            cards: {
+              surface: '这是对用户输入问题的表层描述和理解，帮助你明确问题的基本含义和范围。',
+              assumption: '分析问题中可能存在的隐含假设和前提条件，帮助你识别潜在的思维局限。',
+              info_gap: '指出问题描述中可能缺少的关键信息，帮助你完善问题的理解。',
+              blind_spot: '分析可能存在的认知偏见或盲点，帮助你从不同角度思考问题。',
+              suggestion: '基于分析提供的具体建议和改进方向，帮助你找到解决问题的思路。'
+            },
+            ready_for_suggestion: false
+          });
         }
       }
     }
@@ -256,18 +284,7 @@
             scrollToBottom();
           } else {
             // 更新卡片
-            if (data.cards) {
-              updateCards(data.cards);
-            } else {
-              // 兼容旧格式
-              updateCards([
-                { content: data.surface_question, ready_for_suggestion: false },
-                { content: data.implicit_assumptions, ready_for_suggestion: false },
-                { content: data.missing_information, ready_for_suggestion: false },
-                { content: data.cognitive_blindspots, ready_for_suggestion: false },
-                { content: data.suggestions, ready_for_suggestion: data.ready_for_suggestion }
-              ]);
-            }
+            updateCards(data);
             
             // 处理追问
             if (data.follow_up) {
