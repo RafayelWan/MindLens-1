@@ -16,14 +16,29 @@ SESSION_TTL = 3600 * 4  # 4 hours
 _sessions: dict[str, "SessionData"] = {}
 
 
+MAX_MEMORY_MESSAGES = 20
+
+
 @dataclass
 class SessionData:
     api_key: str
     base_url: str
     model: str
     client: OpenAI
+    memory: list = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
     last_active: float = field(default_factory=time.time)
+
+    def get_memory(self) -> list[dict]:
+        return list(self.memory)
+
+    def append_memory(self, role: str, content: str) -> None:
+        self.memory.append({"role": role, "content": content})
+        if len(self.memory) > MAX_MEMORY_MESSAGES:
+            self.memory = self.memory[-MAX_MEMORY_MESSAGES:]
+
+    def clear_memory(self) -> None:
+        self.memory.clear()
 
 
 def create_session(api_key: str, base_url: str, model: str = "gpt-4o") -> str:

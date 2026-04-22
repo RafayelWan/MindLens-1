@@ -1,10 +1,12 @@
-"""多轮分析的核心业务逻辑。server.py 和终端测试共用此模块。"""
+"""多轮分析的核心业务逻辑。"""
+
+from __future__ import annotations
 
 import json
 import re
 import logging
 from .llm import chat_sync
-from .memory import save_memory, load_memory
+from .session import SessionData
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +19,10 @@ def extract_json(text: str | None) -> str:
         return "{}"
     text = text.strip()
 
-    # Try to find JSON inside a code block: ```json ... ``` or ``` ... ```
     m = re.search(r"```(?:json)?\s*\n?(.*?)\n?\s*```", text, re.DOTALL)
     if m:
         return m.group(1).strip()
 
-    # Try to find the outermost { ... } block
     start = text.find("{")
     end = text.rfind("}")
     if start != -1 and end > start:
@@ -48,25 +48,24 @@ def parse_reply(reply: str) -> dict:
         }
 
 
-def count_rounds() -> int:
-    memory = load_memory()
-    return len([m for m in memory if m["role"] == "user"])
+def _count_user_rounds(session: SessionData) -> int:
+    return len([m for m in session.get_memory() if m["role"] == "user"])
 
 
-def start_analysis(client, question: str, model: str = None) -> dict:
+def start_analysis(session: SessionData, question: str) -> dict:
     """开始新的分析会话：清空记忆，发送第一条消息，返回解析后的结果。"""
-    save_memory([])
-    reply = chat_sync(client, question, "mind_lens", model=model)
+    session.clear_memory()
+    reply = chat_sync(session, question, "mind_lens")
     data = parse_reply(reply)
-    data["round"] = count_rounds()
+    data["round"] = _count_user_rounds(session)
     return data
 
 
-def continue_analysis(client, user_message: str, model: str = None) -> dict:
+def continue_analysis(session: SessionData, user_message: str) -> dict:
     """继续分析会话：发送用户回复，返回解析后的结果。超过最大轮次强制输出建议。"""
-    reply = chat_sync(client, user_message, "mind_lens", model=model)
+    reply = chat_sync(session, user_message, "mind_lens")
     data = parse_reply(reply)
-    rounds = count_rounds()
+    rounds = _count_user_rounds(session)
     data["round"] = rounds
     if rounds >= MAX_ROUNDS and not data.get("ready_for_suggestion"):
         data["ready_for_suggestion"] = True

@@ -5,8 +5,6 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from openai import APIError
 
-from .llm import chat_sync
-from .memory import load_memory, save_memory
 from .analysis import start_analysis, continue_analysis
 from .session import create_session, get_session
 
@@ -72,7 +70,7 @@ async def api_analysis_start(req: AnalysisStartRequest, request: Request):
     """Start a new analysis session: clear memory, send first message, return parsed JSON."""
     session = _require_session(request)
     try:
-        return start_analysis(session.client, req.question, model=session.model)
+        return start_analysis(session, req.question)
     except APIError as e:
         logger.exception("LLM API error")
         return JSONResponse(status_code=502, content={"error": f"LLM 服务返回错误: {e.message}"})
@@ -86,7 +84,7 @@ async def api_analysis_reply(req: AnalysisReplyRequest, request: Request):
     """Continue an ongoing analysis session, return parsed JSON."""
     session = _require_session(request)
     try:
-        return continue_analysis(session.client, req.message, model=session.model)
+        return continue_analysis(session, req.message)
     except APIError as e:
         logger.exception("LLM API error")
         return JSONResponse(status_code=502, content={"error": f"LLM 服务返回错误: {e.message}"})
@@ -96,14 +94,16 @@ async def api_analysis_reply(req: AnalysisReplyRequest, request: Request):
 
 
 @app.post("/api/clear")
-async def api_clear():
-    save_memory([])
+async def api_clear(request: Request):
+    session = _require_session(request)
+    session.clear_memory()
     return {"status": "ok"}
 
 
 @app.get("/api/memory")
-async def api_memory():
-    return load_memory()
+async def api_memory(request: Request):
+    session = _require_session(request)
+    return session.get_memory()
 
 
 app.mount("/", StaticFiles(directory="ui", html=True), name="ui")
