@@ -817,6 +817,13 @@ textarea:focus {
   transform: none;
 }
 
+.modal-hint {
+  color: #999;
+  font-size: 0.8rem;
+  text-align: center;
+  margin: -0.5rem 0 0.8rem;
+}
+
 .modal-error {
   color: #e74c3c;
   font-size: 0.85rem;
