@@ -7,9 +7,6 @@ API_KEY = os.getenv("LLM_API_KEY", "")
 BASE_URL = os.getenv("LLM_BASE_URL", "https://api.openai.com/v1")
 MODEL = os.getenv("LLM_MODEL", "gpt-4o")
 
-MEMORY_FILE = "memory.json"
-MAX_MEMORY_ROUNDS = 50
-
 TEMPERATURE = 0.8
 TOP_P = 0.9
 
