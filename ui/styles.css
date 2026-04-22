@@ -662,6 +662,171 @@ textarea:focus {
 
 /* ===== Animations ===== */
 
+/* ===== API Key Button ===== */
+
+.api-key-btn {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  padding: 0.45rem 1rem;
+  background: transparent;
+  color: #8B9DC3;
+  border: 1px solid rgba(139, 157, 195, 0.4);
+  border-radius: 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  z-index: 10;
+}
+
+.api-key-btn:hover {
+  background: rgba(139, 157, 195, 0.08);
+  border-color: rgba(139, 157, 195, 0.6);
+  transform: translateY(-1px);
+}
+
+.api-key-btn.configured {
+  color: #6a9f6a;
+  border-color: rgba(106, 159, 106, 0.4);
+}
+
+.api-key-btn.configured:hover {
+  background: rgba(106, 159, 106, 0.08);
+  border-color: rgba(106, 159, 106, 0.6);
+}
+
+/* ===== Modal Overlay ===== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: modalFadeIn 0.2s ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: #FFFDF7;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
+  padding: 2rem 2.2rem;
+  width: 380px;
+  max-width: 90vw;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.1);
+  animation: modalSlideUp 0.25s ease;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-content h3 {
+  font-size: 1.15rem;
+  color: #3a3a3a;
+  font-weight: 400;
+  font-family: Georgia, 'Playfair Display', 'Times New Roman', serif;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.modal-field {
+  margin-bottom: 1.2rem;
+}
+
+.modal-field label {
+  display: block;
+  font-size: 0.88rem;
+  color: #777;
+  margin-bottom: 0.4rem;
+  font-weight: 400;
+}
+
+.modal-field input {
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid rgba(200, 190, 175, 0.35);
+  border-radius: 10px;
+  font-size: 0.93rem;
+  background: rgba(255, 252, 245, 0.85);
+  color: #333;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  font-family: inherit;
+}
+
+.modal-field input:focus {
+  outline: none;
+  border-color: rgba(139, 157, 195, 0.5);
+  box-shadow: 0 0 0 2px rgba(139, 157, 195, 0.12);
+}
+
+.modal-field input::placeholder {
+  color: #bbb;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.modal-cancel-btn,
+.modal-save-btn {
+  flex: 1;
+  padding: 0.6rem;
+  border-radius: 10px;
+  font-size: 0.93rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: none;
+}
+
+.modal-cancel-btn {
+  background: transparent;
+  color: #888;
+  border: 1px solid rgba(200, 190, 175, 0.35);
+}
+
+.modal-cancel-btn:hover {
+  background: rgba(200, 190, 175, 0.1);
+}
+
+.modal-save-btn {
+  background: #8B9DC3;
+  color: #fff;
+}
+
+.modal-save-btn:hover {
+  background: #7A8BB8;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(139, 157, 195, 0.25);
+}
+
+.modal-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.modal-error {
+  color: #e74c3c;
+  font-size: 0.85rem;
+  text-align: center;
+  min-height: 1.2em;
+  margin: 0;
+}
+
+/* ===== Animations ===== */
+
 @keyframes fadeInUp {
   from {
     opacity: 0;

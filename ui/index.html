@@ -4,15 +4,37 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mind Lens</title>
-  <link rel="stylesheet" id="main-style" href="styles.css">
-  <script>
-    document.getElementById('main-style').href = 'styles.css?v=' + Date.now();
-  </script>
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
   <div class="index-container">
+    <button id="api-key-btn" class="api-key-btn" onclick="openApiKeyModal()">填写 API Key</button>
     <h1>Mind Lens</h1>
     <p class="subtitle">帮助你更清晰的理解和分析问题</p>
+
+    <!-- API Key 弹窗 -->
+    <div id="api-key-modal" class="modal-overlay" style="display:none;">
+      <div class="modal-content">
+        <h3>配置 API</h3>
+        <div class="modal-field">
+          <label for="api-url-input">API URL</label>
+          <input type="text" id="api-url-input" placeholder="https://api.openai.com/v1" />
+        </div>
+        <div class="modal-field">
+          <label for="api-key-input">API Key</label>
+          <input type="password" id="api-key-input" placeholder="sk-..." />
+        </div>
+        <div class="modal-field">
+          <label for="api-model-input">模型名称</label>
+          <input type="text" id="api-model-input" placeholder="gpt-4o / deepseek-chat / ..." />
+        </div>
+        <p id="api-save-error" class="modal-error"></p>
+        <div class="modal-actions">
+          <button class="modal-cancel-btn" onclick="closeApiKeyModal()">取消</button>
+          <button class="modal-save-btn" onclick="saveApiKey()">保存</button>
+        </div>
+      </div>
+    </div>
     
     <div class="input-section">
       <label for="question">写下你正在困扰的问题</label>
@@ -104,10 +126,85 @@
       window.location.href = `result.html?question=${encodeURIComponent(question)}`;
     }
     
-    // 页面加载时初始化
+    function openApiKeyModal() {
+      document.getElementById('api-url-input').value = '';
+      document.getElementById('api-key-input').value = '';
+      document.getElementById('api-model-input').value = '';
+      document.getElementById('api-save-error').textContent = '';
+      document.getElementById('api-key-modal').style.display = 'flex';
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('api-key-modal').style.display = 'none';
+    }
+
+    async function saveApiKey() {
+      const url = document.getElementById('api-url-input').value.trim() || 'https://api.openai.com/v1';
+      const key = document.getElementById('api-key-input').value.trim();
+      const model = document.getElementById('api-model-input').value.trim() || 'gpt-4o';
+      const errorEl = document.getElementById('api-save-error');
+      errorEl.textContent = '';
+
+      if (!key) {
+        document.getElementById('api-key-input').focus();
+        return;
+      }
+
+      const saveBtn = document.querySelector('.modal-save-btn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = '保存中...';
+
+      try {
+        const resp = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key: key, api_url: url, model: model }),
+        });
+
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({}));
+          throw new Error(data.detail || '保存失败');
+        }
+
+        updateApiKeyBtn(true);
+        closeApiKeyModal();
+      } catch (err) {
+        errorEl.textContent = err.message;
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = '保存';
+      }
+    }
+
+    function updateApiKeyBtn(configured) {
+      const btn = document.getElementById('api-key-btn');
+      if (configured) {
+        btn.textContent = 'API Key ✓';
+        btn.classList.add('configured');
+      } else {
+        btn.textContent = '填写 API Key';
+        btn.classList.remove('configured');
+      }
+    }
+
+    async function checkApiConfig() {
+      try {
+        const resp = await fetch('/api/config/status');
+        const data = await resp.json();
+        updateApiKeyBtn(data.configured);
+      } catch {
+        updateApiKeyBtn(false);
+      }
+    }
+
     window.onload = function() {
-      // 默认隐藏历史记录
       document.getElementById('history-container').style.display = 'none';
+
+      document.getElementById('api-key-modal').addEventListener('click', function(e) {
+        if (e.target === this) closeApiKeyModal();
+      });
+
+      checkApiConfig();
     };
   </script>
 </body>

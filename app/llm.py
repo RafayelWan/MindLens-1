@@ -6,10 +6,12 @@ from .config import API_KEY, BASE_URL, MODEL, TEMPERATURE, TOP_P, load_system_pr
 from .memory import load_memory, append_to_memory
 
 
-def create_client() -> OpenAI:
-    if not API_KEY or API_KEY == "your-api-key-here":
-        raise ValueError("请先在 .env 文件中设置 LLM_API_KEY")
-    return OpenAI(api_key=API_KEY, base_url=BASE_URL)
+def create_client(api_key: str = None, base_url: str = None) -> OpenAI:
+    key = api_key or API_KEY
+    url = base_url or BASE_URL
+    if not key or key == "your-api-key-here":
+        raise ValueError("请先配置 API Key（通过前端设置或 .env 文件）")
+    return OpenAI(api_key=key, base_url=url)
 
 
 def build_messages(user_input: str, prompt_name: str = "default") -> list[dict]:
@@ -22,11 +24,12 @@ def build_messages(user_input: str, prompt_name: str = "default") -> list[dict]:
     return messages
 
 
-def chat_sync(client: OpenAI, user_input: str, prompt_name: str = "default") -> str:
+def chat_sync(client: OpenAI, user_input: str, prompt_name: str = "default", model: str = None) -> str:
     messages = build_messages(user_input, prompt_name)
+    use_model = model or MODEL
 
     response = client.chat.completions.create(
-        model=MODEL, messages=messages,
+        model=use_model, messages=messages,
         temperature=TEMPERATURE, top_p=TOP_P,
     )
     reply = response.choices[0].message.content
@@ -36,12 +39,13 @@ def chat_sync(client: OpenAI, user_input: str, prompt_name: str = "default") -> 
     return reply
 
 
-def chat_stream(client: OpenAI, user_input: str, prompt_name: str = "default") -> Generator[str, None, str]:
+def chat_stream(client: OpenAI, user_input: str, prompt_name: str = "default", model: str = None) -> Generator[str, None, str]:
     """流式生成回复，yield 每个文本片段，最终 return 完整回复。"""
     messages = build_messages(user_input, prompt_name)
+    use_model = model or MODEL
 
     stream = client.chat.completions.create(
-        model=MODEL, messages=messages,
+        model=use_model, messages=messages,
         temperature=TEMPERATURE, top_p=TOP_P,
         stream=True,
         stream_options={"include_usage": True},

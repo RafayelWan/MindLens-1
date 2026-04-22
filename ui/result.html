@@ -4,10 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>分析结果 - Mind Lens</title>
-  <link rel="stylesheet" id="main-style" href="styles.css">
-  <script>
-    document.getElementById('main-style').href = 'styles.css?v=' + Date.now();
-  </script>
+  <link rel="stylesheet" href="styles.css?v=2">
 </head>
 <body>
   <div class="container">
@@ -146,12 +143,9 @@
               }
             }
             
-            // 处理建议卡片的解锁
             if (index === 4) {
-              if (data.ready_for_suggestion === true && card.content) {
+              if (data.ready_for_suggestion === true) {
                 cardElement.classList.remove('locked');
-              } else {
-                cardElement.classList.add('locked');
               }
             }
           }
@@ -159,66 +153,93 @@
       }
     }
     
-    // 页面初始化
+    async function tryResumeSession(decodedQuestion) {
+      try {
+        const memResp = await fetch('/api/memory');
+        if (!memResp.ok) return false;
+        const memory = await memResp.json();
+        if (!Array.isArray(memory) || memory.length === 0) return false;
+
+        const firstUserMsg = memory.find(m => m.role === 'user');
+        if (!firstUserMsg || firstUserMsg.content !== decodedQuestion) return false;
+
+        memory.forEach(m => addMessage(m.content, m.role === 'user' ? 'user' : 'ai'));
+
+        const lastReply = [...memory].reverse().find(m => m.role === 'assistant');
+        if (lastReply) {
+          try {
+            const data = JSON.parse(lastReply.content.replace(/```json\n?/g, '').replace(/```/g, ''));
+            updateCards(data);
+          } catch {
+            updateCards({
+              cards: { surface: '会话已恢复', assumption: '', info_gap: '', blind_spot: '', suggestion: '' },
+              ready_for_suggestion: false
+            });
+          }
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
     async function initPage() {
       const question = getQueryParam('question');
       if (question) {
         const decodedQuestion = decodeURIComponent(question);
         document.getElementById('displayQuestion').textContent = decodedQuestion;
-        
-        // 显示初始问题
+
+        const sessionKey = 'mindlens_active_question';
+        const isRefresh = sessionStorage.getItem(sessionKey) === decodedQuestion;
+
+        if (isRefresh) {
+          showStatusMessage('正在恢复会话...');
+          const resumed = await tryResumeSession(decodedQuestion);
+          hideStatusMessage();
+          if (resumed) return;
+        }
+
+        sessionStorage.setItem(sessionKey, decodedQuestion);
         addMessage(decodedQuestion, 'user');
-        
-        // 显示系统提示
         showStatusMessage('Mind Lens 正在对该问题进行初始对焦...');
         
-        // 显示加载状态
         const container = document.getElementById('analysis-container');
         container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #888;">正在分析...请稍候</div>';
         
         try {
-          // 发起首轮分析
           const response = await fetch('/api/analysis/start', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ question: decodedQuestion })
           });
           
+          if (response.status === 401) {
+            throw new Error('请先在首页配置 API Key');
+          }
           if (!response.ok) {
-            throw new Error('分析启动失败');
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || '分析启动失败');
           }
           
           const data = await response.json();
-          
-          // 隐藏状态消息
           hideStatusMessage();
-          
-          // 更新卡片
           updateCards(data);
           
-          // 处理追问
           if (data.follow_up) {
             addMessage(data.follow_up, 'ai');
           }
           
         } catch (error) {
-          console.log('后端未连接，仅展示 UI 效果');
           console.error('启动分析错误:', error);
-          
-          // 隐藏状态消息
           hideStatusMessage();
           
-          // 显示错误提示
           const chatMessages = document.querySelector('.chat-messages');
           const errorDiv = document.createElement('div');
           errorDiv.className = 'error-message';
-          errorDiv.innerHTML = '<p style="color: #e74c3c;">后端服务暂时不可用，仅展示默认分析结果</p>';
+          errorDiv.innerHTML = `<p>${error.message || '后端服务暂时不可用'}</p>`;
           chatMessages.appendChild(errorDiv);
           scrollToBottom();
           
-          // 显示默认分析结果
           updateCards({
             cards: {
               surface: '这是对用户输入问题的表层描述和理解，帮助你明确问题的基本含义和范围。',
@@ -268,8 +289,12 @@
             })
           });
           
+          if (response.status === 401) {
+            throw new Error('会话已过期，请返回首页重新配置 API Key');
+          }
           if (!response.ok) {
-            throw new Error('回复发送失败');
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || '回复发送失败');
           }
           
           const data = await response.json();
@@ -296,17 +321,15 @@
           }
           
         } catch (error) {
-          console.log('后端未连接，仅展示 UI 效果');
           console.error('发送回复错误:', error);
           
-          // 隐藏状态消息
           hideStatusMessage();
           
-          // 显示错误提示
           const chatMessages = document.querySelector('.chat-messages');
           const errorDiv = document.createElement('div');
           errorDiv.className = 'error-message';
-          errorDiv.innerHTML = '<p style="color: #e74c3c;">后端服务暂时不可用，无法处理你的回复</p>';
+          const errMsg = error.message || '后端服务暂时不可用，无法处理你的回复';
+          errorDiv.innerHTML = `<p>${errMsg}</p>`;
           chatMessages.appendChild(errorDiv);
           scrollToBottom();
         } finally {
@@ -318,7 +341,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-      // 初始化页面
       initPage();
       
       // 绑定发送按钮事件
