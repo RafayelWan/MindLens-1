@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from openai import APIError
 
-from .analysis import parse_reply, _count_user_rounds, MAX_ROUNDS
+from .analysis import parse_reply, _count_user_rounds
 from .config import API_KEY, BASE_URL, MODEL
 from .llm import chat_stream_async
 from .session import create_session, get_session
@@ -112,12 +112,7 @@ async def _stream_analysis(session, user_input: str, *, is_start: bool):
         memory = session.get_memory()
         last_reply = memory[-1]["content"] if memory else ""
         data = parse_reply(last_reply)
-        rounds = _count_user_rounds(session)
-        data["round"] = rounds
-
-        if rounds >= MAX_ROUNDS and not data.get("ready_for_suggestion"):
-            data["ready_for_suggestion"] = True
-            data["follow_up"] = None
+        data["round"] = _count_user_rounds(session)
 
         yield _sse_event({"done": True, "result": data})
 

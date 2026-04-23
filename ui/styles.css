@@ -633,6 +633,33 @@ textarea:focus {
   box-shadow: none;
 }
 
+.chat-btn-group {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.skip-btn {
+  padding: 0.55rem 0.9rem;
+  background: transparent;
+  color: #8BB8D4;
+  border: 1px solid #8BB8D4;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.skip-btn:hover {
+  background: rgba(139, 184, 212, 0.1);
+}
+
+.skip-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ===== Locked Card (suggestion) ===== */
 
 .analysis-item.locked {

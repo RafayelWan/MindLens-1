@@ -24,7 +24,10 @@
           </div>
           <div class="chat-input-area">
             <textarea id="user-reply" rows="1" placeholder="输入你的回复..."></textarea>
-            <button id="send-btn" class="send-btn">发送</button>
+            <div class="chat-btn-group">
+              <button id="skip-btn" class="skip-btn" style="display:none;">直接给出建议</button>
+              <button id="send-btn" class="send-btn">发送</button>
+            </div>
           </div>
         </div>
         <a href="index.html" class="back-link small">重新输入问题</a>
@@ -311,6 +314,10 @@
             updateCards(data);
             if (data.follow_up) {
               addMessage(data.follow_up, 'ai');
+              document.getElementById('skip-btn').style.display = '';
+            }
+            if (data.ready_for_suggestion) {
+              document.getElementById('skip-btn').style.display = 'none';
             }
           }
 
@@ -380,6 +387,10 @@
             updateCards(data);
             if (data.follow_up) {
               addMessage(data.follow_up, 'ai');
+              document.getElementById('skip-btn').style.display = '';
+            }
+            if (data.ready_for_suggestion) {
+              document.getElementById('skip-btn').style.display = 'none';
             }
           }
           
@@ -403,14 +414,22 @@
       }
     }
 
+    async function skipToSuggestion() {
+      const userReply = document.getElementById('user-reply');
+      userReply.value = '[请直接给出建议]';
+      await sendReply();
+      document.getElementById('skip-btn').style.display = 'none';
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
       initPage();
       
-      // 绑定发送按钮事件
       const sendBtn = document.getElementById('send-btn');
+      const skipBtn = document.getElementById('skip-btn');
       const userReply = document.getElementById('user-reply');
       
       sendBtn.addEventListener('click', sendReply);
+      skipBtn.addEventListener('click', skipToSuggestion);
       
       // 支持快捷键：Enter 发送，Shift+Enter 换行
       userReply.addEventListener('keydown', function(e) {
