@@ -633,31 +633,41 @@ textarea:focus {
   box-shadow: none;
 }
 
-.chat-btn-group {
+.bottom-actions {
   display: flex;
-  gap: 0.4rem;
-  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.5rem;
 }
 
 .skip-btn {
-  padding: 0.55rem 0.9rem;
-  background: transparent;
-  color: #8BB8D4;
-  border: 1px solid #8BB8D4;
+  padding: 0.55rem 1.1rem;
+  background: #8BB8D4;
+  color: #fff;
+  border: none;
   border-radius: 12px;
   cursor: pointer;
   font-size: 0.85rem;
+  font-weight: 500;
   white-space: nowrap;
   transition: all 0.2s ease;
 }
 
 .skip-btn:hover {
-  background: rgba(139, 184, 212, 0.1);
+  background: #7AAAC8;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(139, 184, 212, 0.3);
+}
+
+.skip-btn:active {
+  transform: translateY(0);
 }
 
 .skip-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* ===== Locked Card (suggestion) ===== */
