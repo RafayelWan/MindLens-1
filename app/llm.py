@@ -33,3 +33,57 @@ def chat_sync(
     session.append_memory("user", user_input)
     session.append_memory("assistant", reply)
     return reply
+
+
+def chat_stream(
+    session: SessionData,
+    user_input: str,
+    prompt_name: str = "default",
+):
+    """Yield tokens from LLM via streaming. Persists to memory after completion."""
+    messages = build_messages(user_input, prompt_name, session.get_memory())
+    use_model = session.model or MODEL
+
+    stream = session.client.chat.completions.create(
+        model=use_model, messages=messages,
+        temperature=TEMPERATURE, top_p=TOP_P,
+        stream=True,
+    )
+
+    chunks = []
+    for chunk in stream:
+        token = chunk.choices[0].delta.content
+        if token:
+            chunks.append(token)
+            yield token
+
+    reply = "".join(chunks)
+    session.append_memory("user", user_input)
+    session.append_memory("assistant", reply)
+
+
+async def chat_stream_async(
+    session: SessionData,
+    user_input: str,
+    prompt_name: str = "default",
+):
+    """Async version: yield tokens directly on the event loop, no threadpool."""
+    messages = build_messages(user_input, prompt_name, session.get_memory())
+    use_model = session.model or MODEL
+
+    stream = await session.async_client.chat.completions.create(
+        model=use_model, messages=messages,
+        temperature=TEMPERATURE, top_p=TOP_P,
+        stream=True,
+    )
+
+    chunks = []
+    async for chunk in stream:
+        token = chunk.choices[0].delta.content
+        if token:
+            chunks.append(token)
+            yield token
+
+    reply = "".join(chunks)
+    session.append_memory("user", user_input)
+    session.append_memory("assistant", reply)

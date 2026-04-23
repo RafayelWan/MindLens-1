@@ -1,12 +1,14 @@
+import json
 import logging
 from fastapi import FastAPI, Request, Response, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from openai import APIError
 
-from .analysis import start_analysis, continue_analysis
+from .analysis import parse_reply, _count_user_rounds, MAX_ROUNDS
 from .config import API_KEY, BASE_URL, MODEL
+from .llm import chat_stream_async
 from .session import create_session, get_session
 
 logger = logging.getLogger(__name__)
@@ -93,32 +95,67 @@ async def api_config_status(request: Request, response: Response):
     return {"configured": False, "server_provided": False}
 
 
-@app.post("/api/analysis/start")
-async def api_analysis_start(req: AnalysisStartRequest, request: Request, response: Response):
-    """Start a new analysis session: clear memory, send first message, return parsed JSON."""
-    session = _require_session(request, response)
+def _sse_event(data: dict) -> str:
+    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+async def _stream_analysis(session, user_input: str, *, is_start: bool):
+    """Async generator: yields SSE events directly on the event loop for low latency."""
+    if is_start:
+        session.clear_memory()
+
+    prompt_name = "mind_lens"
     try:
-        return start_analysis(session, req.question)
+        async for token in chat_stream_async(session, user_input, prompt_name):
+            yield _sse_event({"token": token})
+
+        memory = session.get_memory()
+        last_reply = memory[-1]["content"] if memory else ""
+        data = parse_reply(last_reply)
+        rounds = _count_user_rounds(session)
+        data["round"] = rounds
+
+        if rounds >= MAX_ROUNDS and not data.get("ready_for_suggestion"):
+            data["ready_for_suggestion"] = True
+            data["follow_up"] = None
+
+        yield _sse_event({"done": True, "result": data})
+
     except APIError as e:
         logger.exception("LLM API error")
-        return JSONResponse(status_code=502, content={"error": f"LLM 服务返回错误: {e.message}"})
+        yield _sse_event({"error": f"LLM 服务返回错误: {e.message}"})
     except Exception as e:
-        logger.exception("Unexpected error in analysis start")
-        return JSONResponse(status_code=500, content={"error": f"服务器内部错误: {str(e)}"})
+        logger.exception("Unexpected error during streaming")
+        yield _sse_event({"error": f"服务器内部错误: {str(e)}"})
+
+
+_SSE_HEADERS = {
+    "Cache-Control": "no-cache",
+    "Connection": "keep-alive",
+    "X-Accel-Buffering": "no",
+}
+
+
+@app.post("/api/analysis/start")
+async def api_analysis_start(req: AnalysisStartRequest, request: Request, response: Response):
+    """Start a new analysis session via SSE streaming."""
+    session = _require_session(request, response)
+    return StreamingResponse(
+        _stream_analysis(session, req.question, is_start=True),
+        media_type="text/event-stream",
+        headers=_SSE_HEADERS,
+    )
 
 
 @app.post("/api/analysis/reply")
 async def api_analysis_reply(req: AnalysisReplyRequest, request: Request, response: Response):
-    """Continue an ongoing analysis session, return parsed JSON."""
+    """Continue an ongoing analysis session via SSE streaming."""
     session = _require_session(request, response)
-    try:
-        return continue_analysis(session, req.message)
-    except APIError as e:
-        logger.exception("LLM API error")
-        return JSONResponse(status_code=502, content={"error": f"LLM 服务返回错误: {e.message}"})
-    except Exception as e:
-        logger.exception("Unexpected error in analysis reply")
-        return JSONResponse(status_code=500, content={"error": f"服务器内部错误: {str(e)}"})
+    return StreamingResponse(
+        _stream_analysis(session, req.message, is_start=False),
+        media_type="text/event-stream",
+        headers=_SSE_HEADERS,
+    )
 
 
 @app.post("/api/clear")

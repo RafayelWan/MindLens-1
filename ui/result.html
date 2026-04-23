@@ -79,6 +79,94 @@
       const statusElement = document.getElementById('status-message');
       statusElement.style.display = 'none';
     }
+
+    const CARD_FIELDS = ['surface', 'assumption', 'info_gap', 'blind_spot', 'suggestion'];
+    const CARD_TITLES = ['表层问题', '隐含假设', '信息缺失', '认知盲点', '最终建议'];
+
+    function initPlaceholderCards() {
+      const container = document.getElementById('analysis-container');
+      container.innerHTML = '';
+      CARD_FIELDS.forEach((field, index) => {
+        const el = document.createElement('div');
+        el.id = `card-${field}`;
+        el.className = `analysis-item ${index === 4 ? 'locked' : ''}`;
+        el.innerHTML = `<h3>${CARD_TITLES[index]}</h3><p></p>`;
+        container.appendChild(el);
+        setTimeout(() => el.classList.add('show'), index * 80);
+      });
+    }
+
+    function extractPartialCards(rawText) {
+      const result = {};
+      for (const field of CARD_FIELDS) {
+        const re = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"?`);
+        const m = rawText.match(re);
+        if (m) {
+          result[field] = m[1]
+            .replace(/\\n/g, '\n')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+        }
+      }
+      return result;
+    }
+
+    function updateStreamingCards(partialCards) {
+      for (const [field, content] of Object.entries(partialCards)) {
+        const card = document.getElementById(`card-${field}`);
+        if (!card) continue;
+        const p = card.querySelector('p');
+        if (p && p.textContent !== content) {
+          p.textContent = content;
+        }
+      }
+    }
+
+    // 消费 SSE 流式响应，返回解析后的最终结果
+    async function consumeSSE(url, body, onToken) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (response.status === 401) {
+        throw new Error('请先在首页配置 API Key');
+      }
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || '请求失败');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalResult = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split('\n\n');
+        buffer = parts.pop();
+
+        for (const part of parts) {
+          if (!part.startsWith('data: ')) continue;
+          const payload = JSON.parse(part.slice(6));
+
+          if (payload.error) {
+            throw new Error(payload.error);
+          } else if (payload.done) {
+            finalResult = payload.result;
+          } else if (payload.token) {
+            onToken(payload.token);
+          }
+        }
+      }
+
+      return finalResult;
+    }
     
     // 滚动到底部
     function scrollToBottom() {
@@ -197,54 +285,45 @@
         sessionStorage.setItem(sessionKey, decodedQuestion);
         addMessage(decodedQuestion, 'user');
         showStatusMessage('Mind Lens 正在对该问题进行初始对焦...');
-        
-        const container = document.getElementById('analysis-container');
-        container.innerHTML = '';
-        
+
+        initPlaceholderCards();
+
         try {
-          const response = await fetch('/api/analysis/start', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question: decodedQuestion })
-          });
-          
-          if (response.status === 401) {
-            throw new Error('请先在首页配置 API Key');
-          }
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || '分析启动失败');
-          }
-          
-          const data = await response.json();
+          let rawText = '';
+          let rafPending = false;
+          const data = await consumeSSE(
+            '/api/analysis/start',
+            { question: decodedQuestion },
+            (token) => {
+              rawText += token;
+              if (!rafPending) {
+                rafPending = true;
+                requestAnimationFrame(() => {
+                  updateStreamingCards(extractPartialCards(rawText));
+                  rafPending = false;
+                });
+              }
+            }
+          );
+
           hideStatusMessage();
-          updateCards(data);
-          
-          if (data.follow_up) {
-            addMessage(data.follow_up, 'ai');
+          if (data) {
+            updateCards(data);
+            if (data.follow_up) {
+              addMessage(data.follow_up, 'ai');
+            }
           }
-          
+
         } catch (error) {
           console.error('启动分析错误:', error);
           hideStatusMessage();
-          
+
           const chatMessages = document.querySelector('.chat-messages');
           const errorDiv = document.createElement('div');
           errorDiv.className = 'error-message';
           errorDiv.innerHTML = `<p>${error.message || '后端服务暂时不可用'}</p>`;
           chatMessages.appendChild(errorDiv);
           scrollToBottom();
-          
-          updateCards({
-            cards: {
-              surface: '这是对用户输入问题的表层描述和理解，帮助你明确问题的基本含义和范围。',
-              assumption: '分析问题中可能存在的隐含假设和前提条件，帮助你识别潜在的思维局限。',
-              info_gap: '指出问题描述中可能缺少的关键信息，帮助你完善问题的理解。',
-              blind_spot: '分析可能存在的认知偏见或盲点，帮助你从不同角度思考问题。',
-              suggestion: '基于分析提供的具体建议和改进方向，帮助你找到解决问题的思路。'
-            },
-            ready_for_suggestion: false
-          });
         }
       }
     }
@@ -271,41 +350,34 @@
         sendBtn.disabled = true;
         
         try {
-          // 发起接口请求
-          const response = await fetch('/api/analysis/reply', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ message: reply })
-          });
-          
-          if (response.status === 401) {
-            throw new Error('会话已过期，请返回首页重新配置 API Key');
-          }
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData.error || '回复发送失败');
-          }
-          
-          const data = await response.json();
-          
-          // 隐藏状态消息
+          let rawText = '';
+          let rafPending = false;
+          const data = await consumeSSE(
+            '/api/analysis/reply',
+            { message: reply },
+            (token) => {
+              rawText += token;
+              if (!rafPending) {
+                rafPending = true;
+                requestAnimationFrame(() => {
+                  updateStreamingCards(extractPartialCards(rawText));
+                  rafPending = false;
+                });
+              }
+            }
+          );
+
           hideStatusMessage();
-          
-          // 处理错误
-          if (data.error) {
+
+          if (data && data.error) {
             const chatMessages = document.querySelector('.chat-messages');
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error-message';
             errorDiv.innerHTML = `<p style="color: #e74c3c;">${data.error}</p>`;
             chatMessages.appendChild(errorDiv);
             scrollToBottom();
-          } else {
-            // 更新卡片
+          } else if (data) {
             updateCards(data);
-            
-            // 处理追问
             if (data.follow_up) {
               addMessage(data.follow_up, 'ai');
             }

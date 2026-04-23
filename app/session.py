@@ -8,7 +8,7 @@ import uuid
 import time
 from dataclasses import dataclass, field
 from typing import Optional
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 
 
 SESSION_TTL = 3600 * 4  # 4 hours
@@ -25,6 +25,7 @@ class SessionData:
     base_url: str
     model: str
     client: OpenAI
+    async_client: AsyncOpenAI
     memory: list = field(default_factory=list)
     created_at: float = field(default_factory=time.time)
     last_active: float = field(default_factory=time.time)
@@ -46,11 +47,13 @@ def create_session(api_key: str, base_url: str, model: str = "gpt-4o") -> str:
     _cleanup_expired()
     session_id = uuid.uuid4().hex
     client = OpenAI(api_key=api_key, base_url=base_url)
+    async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
     _sessions[session_id] = SessionData(
         api_key=api_key,
         base_url=base_url,
         model=model,
         client=client,
+        async_client=async_client,
     )
     return session_id
 
