@@ -193,6 +193,9 @@
         const resp = await fetch('/api/config/status');
         const data = await resp.json();
         updateApiKeyBtn(data.configured);
+        if (data.server_provided) {
+          document.getElementById('api-key-btn').style.display = 'none';
+        }
       } catch {
         updateApiKeyBtn(false);
       }
