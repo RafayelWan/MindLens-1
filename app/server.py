@@ -106,7 +106,7 @@ async def _stream_analysis(session, user_input: str, *, is_start: bool):
 
     prompt_name = "mind_lens"
     try:
-        async for token in chat_stream_async(session, user_input, prompt_name):
+        async for token in chat_stream_async(session, user_input, prompt_name, json_mode=True):
             yield _sse_event({"token": token})
 
         memory = session.get_memory()

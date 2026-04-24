@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 import logging
+import json_repair
 from .llm import chat_sync
 from .session import SessionData
 
@@ -30,20 +31,30 @@ def extract_json(text: str | None) -> str:
 
 
 def parse_reply(reply: str) -> dict:
-    """解析 LLM 返回的 JSON。解析失败时返回带 error 字段的 dict。"""
+    """解析 LLM 返回的 JSON。先尝试标准解析，失败后用 json_repair 修复。"""
     extracted = extract_json(reply)
     try:
         return json.loads(extracted)
     except json.JSONDecodeError:
-        logger.warning("Failed to parse LLM reply as JSON. Raw: %s", reply[:500])
-        return {
-            "cards": {},
-            "follow_up": None,
-            "ready_for_suggestion": False,
-            "round": 0,
-            "error": "LLM 返回了非法 JSON，请重试",
-            "raw": reply[:500] if reply else "",
-        }
+        pass
+
+    try:
+        repaired = json_repair.loads(extracted)
+        if isinstance(repaired, dict):
+            logger.info("JSON repaired successfully via json_repair")
+            return repaired
+    except Exception:
+        pass
+
+    logger.warning("Failed to parse LLM reply as JSON. Raw: %s", reply[:500])
+    return {
+        "cards": {},
+        "follow_up": None,
+        "ready_for_suggestion": False,
+        "round": 0,
+        "error": "LLM 返回了非法 JSON，请重试",
+        "raw": reply[:500] if reply else "",
+    }
 
 
 def _count_user_rounds(session: SessionData) -> int:
@@ -53,7 +64,7 @@ def _count_user_rounds(session: SessionData) -> int:
 def start_analysis(session: SessionData, question: str) -> dict:
     """开始新的分析会话：清空记忆，发送第一条消息，返回解析后的结果。"""
     session.clear_memory()
-    reply = chat_sync(session, question, "mind_lens")
+    reply = chat_sync(session, question, "mind_lens", json_mode=True)
     data = parse_reply(reply)
     data["round"] = _count_user_rounds(session)
     return data
@@ -61,7 +72,7 @@ def start_analysis(session: SessionData, question: str) -> dict:
 
 def continue_analysis(session: SessionData, user_message: str) -> dict:
     """继续分析会话：发送用户回复，返回解析后的结果。由 LLM 自主判断何时给出建议。"""
-    reply = chat_sync(session, user_message, "mind_lens")
+    reply = chat_sync(session, user_message, "mind_lens", json_mode=True)
     data = parse_reply(reply)
     rounds = _count_user_rounds(session)
     data["round"] = rounds
