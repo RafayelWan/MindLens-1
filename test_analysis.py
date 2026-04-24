@@ -1,7 +1,7 @@
 """终端测试多轮分析流程，无需启动 server。"""
 
 from app.llm import create_client
-from app.analysis import start_analysis, continue_analysis, MAX_ROUNDS
+from app.analysis import start_analysis, continue_analysis
 
 
 def print_cards(cards: dict):
@@ -44,7 +44,7 @@ def handle_response(data: dict) -> bool:
         return True
 
     if follow_up:
-        print(f"\n💬 AI 追问（第 {round_num} 轮 / 共 {MAX_ROUNDS} 轮）：")
+        print(f"\n💬 AI 追问（第 {round_num} 轮）：")
         print(f"   {follow_up}")
         return False
 

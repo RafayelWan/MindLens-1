@@ -10,8 +10,6 @@ from .session import SessionData
 
 logger = logging.getLogger(__name__)
 
-MAX_ROUNDS = 5
-
 
 def extract_json(text: str | None) -> str:
     """Extract JSON from LLM output, handling code blocks and surrounding text."""
@@ -62,12 +60,9 @@ def start_analysis(session: SessionData, question: str) -> dict:
 
 
 def continue_analysis(session: SessionData, user_message: str) -> dict:
-    """继续分析会话：发送用户回复，返回解析后的结果。超过最大轮次强制输出建议。"""
+    """继续分析会话：发送用户回复，返回解析后的结果。由 LLM 自主判断何时给出建议。"""
     reply = chat_sync(session, user_message, "mind_lens")
     data = parse_reply(reply)
     rounds = _count_user_rounds(session)
     data["round"] = rounds
-    if rounds >= MAX_ROUNDS and not data.get("ready_for_suggestion"):
-        data["ready_for_suggestion"] = True
-        data["follow_up"] = None
     return data
