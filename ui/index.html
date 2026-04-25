@@ -839,6 +839,12 @@
 
     // 页面加载时初始化
     window.onload = function() {
+      // 未登录则跳转登录页
+      if (!localStorage.getItem('user_id')) {
+        window.location.href = 'login.html';
+        return;
+      }
+
       // 检查 API 配置状态
       checkApiStatus();
 
