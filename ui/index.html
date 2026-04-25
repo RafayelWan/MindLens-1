@@ -149,10 +149,17 @@
       background: #7A8BB8;
     }
 
-    .history-button {
+    .side-icons {
       position: fixed;
       top: 2rem;
       left: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      z-index: 1000;
+    }
+
+    .side-icon-btn {
       width: 50px;
       height: 50px;
       border-radius: 50%;
@@ -163,41 +170,23 @@
       cursor: pointer;
       box-shadow: 0 4px 12px rgba(139, 157, 195, 0.2);
       transition: all 0.3s ease;
-      z-index: 1000;
     }
 
-    .history-button:hover {
+    .side-icon-btn:hover {
       transform: scale(1.1);
       box-shadow: 0 6px 16px rgba(139, 157, 195, 0.3);
     }
 
-    .notes-button {
-      position: fixed;
-      bottom: 2rem;
-      right: 2rem;
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      background: #8B9DC3;
-      color: white;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(139, 157, 195, 0.2);
-      transition: all 0.3s ease;
-      z-index: 1000;
+    .side-icon-btn.active {
+      background: #6a7fa8;
+      box-shadow: 0 6px 16px rgba(139, 157, 195, 0.4);
     }
 
-    .notes-button:hover {
-      transform: scale(1.1);
-      box-shadow: 0 6px 16px rgba(139, 157, 195, 0.3);
-    }
-
-    .history-drawer {
+    .side-drawer {
       position: fixed;
       top: 0;
-      left: -400px;
-      width: 350px;
+      left: -500px;
+      width: 438px;
       height: 100vh;
       background: rgba(255, 253, 247, 0.95);
       backdrop-filter: blur(12px);
@@ -211,11 +200,11 @@
       overflow-y: auto;
     }
 
-    .history-drawer.open {
+    .side-drawer.open {
       left: 0;
     }
 
-    .history-header {
+    .side-drawer-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -224,7 +213,7 @@
       border-bottom: 1px solid rgba(200, 190, 175, 0.3);
     }
 
-    .history-header h3 {
+    .side-drawer-header h3 {
       margin: 0;
       font-size: 1.2rem;
       color: #3a3a3a;
@@ -232,7 +221,7 @@
       font-family: Georgia, 'Playfair Display', 'Times New Roman', serif;
     }
 
-    .history-close {
+    .side-drawer-close {
       background: none;
       border: none;
       font-size: 1.5rem;
@@ -241,66 +230,10 @@
       transition: color 0.3s ease;
     }
 
-    .history-close:hover {
-      color: #3a3a3a;
-    }
+    .side-drawer-close:hover { color: #3a3a3a; }
 
-    .history-content {
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    .notes-drawer {
-      position: fixed;
-      top: 0;
-      right: -400px;
-      width: 350px;
-      height: 100vh;
-      background: rgba(255, 253, 247, 0.95);
-      backdrop-filter: blur(12px);
-      border-left: 1px solid rgba(200, 190, 175, 0.3);
-      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
-      transition: right 0.3s ease;
-      z-index: 1001;
-      display: flex;
-      flex-direction: column;
-      padding: 2rem;
-      overflow-y: auto;
-    }
-
-    .notes-drawer.open {
-      right: 0;
-    }
-
-    .notes-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid rgba(200, 190, 175, 0.3);
-    }
-
-    .notes-header h3 {
-      margin: 0;
-      font-size: 1.2rem;
-      color: #3a3a3a;
-      font-weight: 400;
-      font-family: Georgia, 'Playfair Display', 'Times New Roman', serif;
-    }
-
-    .notes-close {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: #7a7a7a;
-      transition: color 0.3s ease;
-    }
-
-    .notes-close:hover {
-      color: #3a3a3a;
-    }
+    .drawer-panel { display: none; flex: 1; flex-direction: column; overflow-y: auto; }
+    .drawer-panel.active { display: flex; }
 
     .notes-input-section {
       margin-bottom: 2rem;
@@ -560,38 +493,52 @@
   </style>
 </head>
 <body>
-  <!-- 历史记录抽屉 -->
-  <div class="history-drawer" id="historyDrawer">
-    <div class="history-header">
-      <h3>历史记录</h3>
-      <button class="history-close" onclick="toggleHistoryDrawer()">×</button>
-    </div>
-    <div class="history-content">
-      <div id="history-list" class="history-list">
-        <!-- 历史记录将在这里显示 -->
-      </div>
-    </div>
+  <!-- 左侧竖排图标 -->
+  <div class="side-icons">
+    <button class="side-icon-btn" id="icon-user"    onclick="openDrawer('user')"    title="用户信息">👤</button>
+    <button class="side-icon-btn" id="icon-history" onclick="openDrawer('history')" title="历史记录">📖</button>
+    <button class="side-icon-btn" id="icon-notes"   onclick="openDrawer('notes')"   title="随手记">📝</button>
+    <button class="side-icon-btn" id="icon-memory"  onclick="openDrawer('memory')"  title="记忆库">🧠</button>
   </div>
 
-  <!-- 历史记录按钮 -->
-  <button class="history-button" onclick="toggleHistoryDrawer()">📖</button>
-  
-  <!-- 随手记按钮 -->
-  <button class="notes-button" onclick="toggleNotes()">📝</button>
-  
-  <!-- 随手记抽屉 -->
-  <div class="notes-drawer" id="notesDrawer">
-    <div class="notes-header">
-      <h3>随手记</h3>
-      <button class="notes-close" onclick="toggleNotes()">×</button>
+  <!-- 统一左侧抽屉 -->
+  <div class="side-drawer" id="sideDrawer">
+    <div class="side-drawer-header">
+      <h3 id="drawer-title">历史记录</h3>
+      <button class="side-drawer-close" onclick="closeDrawer()">×</button>
     </div>
-    <div class="notes-input-section">
-      <textarea class="notes-textarea" id="notesInput" placeholder="记录你的想法..."></textarea>
-      <button class="notes-save-btn" onclick="saveNote()">保存</button>
+
+    <!-- 用户信息面板 -->
+    <div class="drawer-panel" id="panel-user">
+      <div style="text-align:center;padding:1rem 0 1.5rem;">
+        <div style="font-size:3rem;margin-bottom:0.5rem;">👤</div>
+        <p id="drawer-user-name" style="font-size:1.1rem;color:#3a3a3a;font-weight:400;font-family:Georgia,serif;"></p>
+        <p id="drawer-user-email" style="font-size:0.85rem;color:#888;margin-top:0.25rem;"></p>
+      </div>
     </div>
-    <div class="notes-list">
-      <h4>历史记录</h4>
-      <div id="notesList"></div>
+
+    <!-- 历史记录面板 -->
+    <div class="drawer-panel" id="panel-history">
+      <div class="history-content">
+        <div id="history-list" class="history-list"></div>
+      </div>
+    </div>
+
+    <!-- 随手记面板 -->
+    <div class="drawer-panel" id="panel-notes">
+      <div class="notes-input-section">
+        <textarea class="notes-textarea" id="notesInput" placeholder="记录你的想法..."></textarea>
+        <button class="notes-save-btn" onclick="saveNote()">保存</button>
+      </div>
+      <div class="notes-list">
+        <h4>历史记录</h4>
+        <div id="notesList"></div>
+      </div>
+    </div>
+
+    <!-- 记忆库面板 -->
+    <div class="drawer-panel" id="panel-memory">
+      <p style="color:#888;font-size:0.9rem;text-align:center;padding:2rem 0;font-style:italic;">记忆库功能开发中...</p>
     </div>
   </div>
   
@@ -601,25 +548,11 @@
 
     <h1>Mind Lens</h1>
     <p class="subtitle">帮助你更清晰的理解和分析问题</p>
-    
-    <!-- 用户事实信息面板 -->
-    <div class="user-facts-panel">
-      <h3>用户画像</h3>
-      <div class="facts-tags" id="userFacts"></div>
-    </div>
 
     <div class="input-section">
       <label for="question">写下你正在困扰的问题</label>
       <textarea id="question" placeholder="例如：如何平衡工作和生活的关系？"></textarea>
       <button class="btn" onclick="analyzeQuestion()">分析问题</button>
-    </div>
-    
-
-
-    <!-- 思维变化记录模块 -->
-    <div class="thoughts-timeline">
-      <h3>思维变化轨迹</h3>
-      <div class="timeline-container" id="thoughtsTimeline"></div>
     </div>
   </div>
 
@@ -696,13 +629,47 @@
       }
     }
     
-    // 切换历史记录抽屉显示/隐藏
-    function toggleHistoryDrawer() {
-      const drawer = document.getElementById('historyDrawer');
-      drawer.classList.toggle('open');
-      if (drawer.classList.contains('open')) {
-        loadHistory();
+    let currentPanel = null;
+
+    function openDrawer(panel) {
+      const drawer = document.getElementById('sideDrawer');
+      const titles = { user: '用户信息', history: '历史记录', notes: '随手记', memory: '记忆库' };
+
+      // 同一图标再次点击则关闭
+      if (drawer.classList.contains('open') && currentPanel === panel) {
+        closeDrawer();
+        return;
       }
+
+      // 切换 active 图标
+      ['user', 'history', 'notes', 'memory'].forEach(p => {
+        document.getElementById(`icon-${p}`).classList.toggle('active', p === panel);
+      });
+
+      // 切换面板
+      document.querySelectorAll('.drawer-panel').forEach(el => el.classList.remove('active'));
+      document.getElementById(`panel-${panel}`).classList.add('active');
+      document.getElementById('drawer-title').textContent = titles[panel];
+
+      currentPanel = panel;
+      drawer.classList.add('open');
+
+      if (panel === 'history') loadHistory();
+      if (panel === 'notes')   loadNotes();
+      if (panel === 'user')    loadUserDrawer();
+    }
+
+    function closeDrawer() {
+      document.getElementById('sideDrawer').classList.remove('open');
+      ['user', 'history', 'notes', 'memory'].forEach(p => {
+        document.getElementById(`icon-${p}`).classList.remove('active');
+      });
+      currentPanel = null;
+    }
+
+    function loadUserDrawer() {
+      document.getElementById('drawer-user-name').textContent  = localStorage.getItem('user_name')  || '未知用户';
+      document.getElementById('drawer-user-email').textContent = localStorage.getItem('user_email') || '';
     }
     
     function analyzeQuestion() {
@@ -716,15 +683,7 @@
       // 跳转到结果页面并传递问题内容
       window.location.href = `result.html?question=${encodeURIComponent(question)}`;
     }
-    
-    // 切换笔记抽屉显示/隐藏
-    function toggleNotes() {
-      const drawer = document.getElementById('notesDrawer');
-      drawer.classList.toggle('open');
-      if (drawer.classList.contains('open')) {
-        loadNotes();
-      }
-    }
+
 
     // 保存笔记
     async function saveNote() {
@@ -847,12 +806,6 @@
 
       // 检查 API 配置状态
       checkApiStatus();
-
-      // 加载用户事实信息
-      loadUserFacts();
-
-      // 加载思维变化记录
-      loadThoughtsTimeline();
     };
 
     // 检查 API 配置状态

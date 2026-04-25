@@ -66,8 +66,8 @@
 2. 不要丢弃之前轮次有价值的发现。如果之前发现了多个重要的分析点，用编号列出所有点。
 3. 如果新信息证实了之前的分析，明确说明；如果新信息推翻了之前的分析，也要明确说明并更新。
 4. 没有新发现的字段保持上一轮的完整内容不变，不要设为null。
-5. 前几轮follow_up不为null时，suggestion必须为null，ready_for_suggestion必须为false。
-6. 追问轮次没有硬性限制。当你判断已经收集到足够信息来提供有价值的建议时，自主决定将ready_for_suggestion设为true。一般2-4轮追问即可，避免让用户感到疲劳。
+5. **严禁在follow_up不为null的同一轮中将ready_for_suggestion设为true或提供suggestion内容。** 两者互斥，不得同时出现。
+6. 追问轮次没有硬性限制。只有当你确认已无需追问（follow_up为null）时，才可以将ready_for_suggestion设为true并填写suggestion。一般需要2-4轮追问，避免让用户感到疲劳。
 7. 如果用户发送"[请直接给出建议]"，无论当前信息是否充分，都必须立刻将ready_for_suggestion设为true，基于已有信息给出最好的suggestion，follow_up设为null。
 8. 每个字段允许内容随轮次增长，但要保持精炼——每个分析点用1-2句话，避免重复啰嗦。
 9. 只输出JSON，不要在JSON前后添加任何解释性文字或markdown代码块标记。
