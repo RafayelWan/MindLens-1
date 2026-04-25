@@ -19,6 +19,136 @@
     }
 
     /* 随手记功能 */
+    .api-key-btn {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      padding: 0.45rem 1rem;
+      background: transparent;
+      color: #3a3a3a;
+      border: 1px solid rgba(60, 60, 60, 0.35);
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .api-key-btn:hover {
+      background: rgba(60, 60, 60, 0.06);
+    }
+
+    .api-key-btn.configured {
+      color: #3a8a4a;
+      border-color: rgba(58, 138, 74, 0.4);
+    }
+
+    .api-modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.25);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .api-modal-overlay.open {
+      display: flex;
+    }
+
+    .api-modal {
+      background: rgba(255, 253, 247, 0.97);
+      border: 1px solid rgba(200, 190, 175, 0.4);
+      border-radius: 20px;
+      padding: 2rem;
+      width: 420px;
+      max-width: 90vw;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .api-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .api-modal-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 400;
+      color: #3a3a3a;
+      font-family: Georgia, serif;
+    }
+
+    .api-modal-close {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: #7a7a7a;
+      line-height: 1;
+    }
+
+    .api-modal-hint {
+      font-size: 0.82rem;
+      color: #888;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .api-modal-field {
+      margin-bottom: 1.1rem;
+    }
+
+    .api-modal-field label {
+      display: block;
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 0.4rem;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    .api-modal-field input {
+      width: 100%;
+      padding: 0.7rem 1rem;
+      border: 1px solid rgba(200, 190, 175, 0.4);
+      border-radius: 10px;
+      font-size: 0.9rem;
+      background: rgba(255, 252, 245, 0.9);
+      color: #333;
+      font-family: inherit;
+      min-height: unset;
+      resize: none;
+    }
+
+    .api-modal-field input:focus {
+      outline: none;
+      border-color: rgba(120, 144, 156, 0.4);
+      box-shadow: 0 0 0 3px rgba(120, 144, 156, 0.1);
+    }
+
+    .api-modal-submit {
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.8rem;
+      background: #8B9DC3;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+
+    .api-modal-submit:hover {
+      background: #7A8BB8;
+    }
+
     .history-button {
       position: fixed;
       top: 2rem;
@@ -466,6 +596,9 @@
   </div>
   
   <div class="index-container">
+    <!-- API Key 按钮 -->
+    <button id="api-key-btn" class="api-key-btn" onclick="openApiModal()">添加 API Key</button>
+
     <h1>Mind Lens</h1>
     <p class="subtitle">帮助你更清晰的理解和分析问题</p>
     
@@ -487,6 +620,30 @@
     <div class="thoughts-timeline">
       <h3>思维变化轨迹</h3>
       <div class="timeline-container" id="thoughtsTimeline"></div>
+    </div>
+  </div>
+
+  <!-- API Key 弹窗 -->
+  <div id="api-modal-overlay" class="api-modal-overlay" onclick="closeApiModal(event)">
+    <div class="api-modal">
+      <div class="api-modal-header">
+        <h3>配置 API</h3>
+        <button class="api-modal-close" onclick="closeApiModal()">×</button>
+      </div>
+      <p class="api-modal-hint">仅支持 OpenAI 兼容格式的 API（如 OpenAI、DeepSeek、Moonshot 等）</p>
+      <div class="api-modal-field">
+        <label>API Key</label>
+        <input type="password" id="input-api-key" placeholder="sk-..." />
+      </div>
+      <div class="api-modal-field">
+        <label>API URL</label>
+        <input type="text" id="input-api-url" placeholder="https://api.openai.com/v1" />
+      </div>
+      <div class="api-modal-field">
+        <label>Model Name</label>
+        <input type="text" id="input-model" placeholder="gpt-4o" />
+      </div>
+      <button class="api-modal-submit" onclick="submitApiConfig()">保存</button>
     </div>
   </div>
   
@@ -682,12 +839,64 @@
 
     // 页面加载时初始化
     window.onload = function() {
+      // 检查 API 配置状态
+      checkApiStatus();
+
       // 加载用户事实信息
       loadUserFacts();
-      
+
       // 加载思维变化记录
       loadThoughtsTimeline();
     };
+
+    // 检查 API 配置状态
+    async function checkApiStatus() {
+      try {
+        const res = await fetch('/api/config/status');
+        const data = await res.json();
+        const btn = document.getElementById('api-key-btn');
+        if (data.configured) {
+          btn.textContent = 'API Key ✔';
+          btn.classList.add('configured');
+        }
+      } catch (e) {
+        console.warn('无法检查 API 状态', e);
+      }
+    }
+
+    function openApiModal() {
+      document.getElementById('api-modal-overlay').classList.add('open');
+    }
+
+    function closeApiModal(e) {
+      if (!e || e.target === document.getElementById('api-modal-overlay')) {
+        document.getElementById('api-modal-overlay').classList.remove('open');
+      }
+    }
+
+    async function submitApiConfig() {
+      const api_key = document.getElementById('input-api-key').value.trim();
+      const api_url = document.getElementById('input-api-url').value.trim() || 'https://api.openai.com/v1';
+      const model = document.getElementById('input-model').value.trim() || 'gpt-4o';
+
+      if (!api_key) { alert('请输入 API Key'); return; }
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ api_key, api_url, model })
+        });
+        if (!res.ok) throw new Error('配置失败');
+        const btn = document.getElementById('api-key-btn');
+        btn.textContent = 'API Key ✔';
+        btn.classList.add('configured');
+        closeApiModal();
+      } catch (e) {
+        alert('配置失败，请重试');
+        console.error(e);
+      }
+    }
   </script>
 </body>
 </html>
