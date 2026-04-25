@@ -5,3 +5,4 @@ __pycache__/
 .cursor/
 DevLog.md
 test/results/
+users/*/

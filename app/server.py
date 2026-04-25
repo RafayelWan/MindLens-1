@@ -10,6 +10,7 @@ from .analysis import parse_reply, _count_user_rounds
 from .config import API_KEY, BASE_URL, MODEL
 from .llm import chat_stream_async
 from .session import create_session, get_session
+from . import user_store
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +165,67 @@ async def api_clear(request: Request, response: Response):
 async def api_memory(request: Request, response: Response):
     session = _require_session(request, response)
     return session.get_memory()
+
+
+# ---------------------------------------------------------------------------
+# Auth
+# ---------------------------------------------------------------------------
+
+class RegisterRequest(BaseModel):
+    email: str
+    name: str
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@app.post("/api/auth/register")
+async def api_register(req: RegisterRequest):
+    try:
+        result = user_store.register(req.email, req.name, req.password)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/auth/login")
+async def api_login(req: LoginRequest):
+    try:
+        result = user_store.login(req.email, req.password)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+# ---------------------------------------------------------------------------
+# Notes
+# ---------------------------------------------------------------------------
+
+class NoteRequest(BaseModel):
+    email: str
+    content: str
+
+
+@app.get("/api/notes")
+async def api_get_notes(email: str):
+    return user_store.get_notes(email)
+
+
+@app.post("/api/notes")
+async def api_add_note(req: NoteRequest):
+    return user_store.add_note(req.email, req.content)
+
+
+# ---------------------------------------------------------------------------
+# Sessions history
+# ---------------------------------------------------------------------------
+
+@app.get("/api/sessions")
+async def api_get_sessions(email: str):
+    return user_store.get_sessions(email)
 
 
 app.mount("/", StaticFiles(directory="ui", html=True), name="ui")

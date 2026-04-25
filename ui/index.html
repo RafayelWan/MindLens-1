@@ -570,70 +570,66 @@
     }
 
     // 保存笔记
-    function saveNote() {
+    async function saveNote() {
       const text = document.getElementById('notesInput').value.trim();
-      if (!text) {
+      if (!text) return;
+
+      const email = localStorage.getItem('user_email');
+      if (!email) {
+        alert('请先登录后再记录笔记');
         return;
       }
 
-      // 获取用户ID
-      const userId = localStorage.getItem('user_id') || 'guest';
-      const notesKey = `user_notes_${userId}`;
-
-      // 加载现有笔记
-      const notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
-
-      // 添加新笔记
-      const newNote = {
-        text: text,
-        time: Date.now()
-      };
-
-      notes.unshift(newNote);
-
-      // 保存回 localStorage
-      localStorage.setItem(notesKey, JSON.stringify(notes));
-
-      // 清空输入框
-      document.getElementById('notesInput').value = '';
-
-      // 刷新笔记列表
-      loadNotes();
+      try {
+        const res = await fetch('/api/notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, content: text })
+        });
+        if (!res.ok) throw new Error('保存失败');
+        document.getElementById('notesInput').value = '';
+        loadNotes();
+      } catch (e) {
+        alert('笔记保存失败，请重试');
+        console.error(e);
+      }
     }
 
     // 加载笔记历史
-    function loadNotes() {
-      // 获取用户ID
-      const userId = localStorage.getItem('user_id') || 'guest';
-      const notesKey = `user_notes_${userId}`;
-
-      // 加载笔记
-      const notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+    async function loadNotes() {
+      const email = localStorage.getItem('user_email');
       const notesList = document.getElementById('notesList');
 
-      if (notes.length === 0) {
-        notesList.innerHTML = '<p class="no-notes">暂无笔记</p>';
+      if (!email) {
+        notesList.innerHTML = '<p class="no-notes">请先登录以查看笔记</p>';
         return;
       }
 
-      // 按时间倒序排列
-      notes.sort((a, b) => b.time - a.time);
+      try {
+        const res = await fetch(`/api/notes?email=${encodeURIComponent(email)}`);
+        if (!res.ok) throw new Error('获取笔记失败');
+        const notes = await res.json();
 
-      // 渲染笔记列表
-      notesList.innerHTML = '';
-      notes.forEach(note => {
-        const noteItem = document.createElement('div');
-        noteItem.className = 'note-item';
-        
-        const date = new Date(note.time);
-        const timeString = date.toLocaleString();
-        
-        noteItem.innerHTML = `
-          <p class="note-text">${note.text}</p>
-          <p class="note-time">${timeString}</p>
-        `;
-        notesList.appendChild(noteItem);
-      });
+        if (notes.length === 0) {
+          notesList.innerHTML = '<p class="no-notes">暂无笔记</p>';
+          return;
+        }
+
+        notesList.innerHTML = '';
+        notes.forEach(note => {
+          const noteItem = document.createElement('div');
+          noteItem.className = 'note-item';
+          const timeString = new Date(note.created_at * 1000).toLocaleString();
+          noteItem.innerHTML = `
+            <p class="note-text">${note.content}</p>
+            <p class="note-time">${timeString}</p>
+          `;
+          notesList.appendChild(noteItem);
+        });
+      } catch (e) {
+        notesList.innerHTML = '<p class="no-notes">笔记加载失败</p>';
+        console.error(e);
+      }
     }
 
     // 加载用户事实信息
