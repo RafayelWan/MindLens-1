@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>分析结果 - Mind Lens</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div class="container">
@@ -14,6 +14,10 @@
       <!-- 左侧：对话容器 -->
       <div class="left-panel">
         <div id="chat-box" class="chat-box">
+          <div class="initial-question">
+            <h3>你的问题：</h3>
+            <p id="displayQuestion"></p>
+          </div>
           <div class="chat-messages">
             <div id="ai-follow-up" class="ai-follow-up">
               <!-- AI 追问将在这里显示 -->
@@ -27,10 +31,7 @@
             <button id="send-btn" class="send-btn">发送</button>
           </div>
         </div>
-        <div class="bottom-actions">
-          <a href="index.html" class="back-link small">重新输入</a>
-          <button id="skip-btn" class="skip-btn" style="display:none;">直接给建议</button>
-        </div>
+        <a href="index.html" class="back-link small">重新输入问题</a>
       </div>
       
       <!-- 右侧：AI 分析结果区域 -->
@@ -81,94 +82,6 @@
     function hideStatusMessage() {
       const statusElement = document.getElementById('status-message');
       statusElement.style.display = 'none';
-    }
-
-    const CARD_FIELDS = ['surface', 'assumption', 'info_gap', 'blind_spot', 'suggestion'];
-    const CARD_TITLES = ['表层问题', '隐含假设', '信息缺失', '认知盲点', '最终建议'];
-
-    function initPlaceholderCards() {
-      const container = document.getElementById('analysis-container');
-      container.innerHTML = '';
-      CARD_FIELDS.forEach((field, index) => {
-        const el = document.createElement('div');
-        el.id = `card-${field}`;
-        el.className = `analysis-item ${index === 4 ? 'locked' : ''}`;
-        el.innerHTML = `<h3>${CARD_TITLES[index]}</h3><p></p>`;
-        container.appendChild(el);
-        setTimeout(() => el.classList.add('show'), index * 80);
-      });
-    }
-
-    function extractPartialCards(rawText) {
-      const result = {};
-      for (const field of CARD_FIELDS) {
-        const re = new RegExp(`"${field}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"?`);
-        const m = rawText.match(re);
-        if (m) {
-          result[field] = m[1]
-            .replace(/\\n/g, '\n')
-            .replace(/\\"/g, '"')
-            .replace(/\\\\/g, '\\');
-        }
-      }
-      return result;
-    }
-
-    function updateStreamingCards(partialCards) {
-      for (const [field, content] of Object.entries(partialCards)) {
-        const card = document.getElementById(`card-${field}`);
-        if (!card) continue;
-        const p = card.querySelector('p');
-        if (p && p.textContent !== content) {
-          p.textContent = content;
-        }
-      }
-    }
-
-    // 消费 SSE 流式响应，返回解析后的最终结果
-    async function consumeSSE(url, body, onToken) {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      if (response.status === 401) {
-        throw new Error('请先在首页配置 API Key');
-      }
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.error || '请求失败');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let finalResult = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop();
-
-        for (const part of parts) {
-          if (!part.startsWith('data: ')) continue;
-          const payload = JSON.parse(part.slice(6));
-
-          if (payload.error) {
-            throw new Error(payload.error);
-          } else if (payload.done) {
-            finalResult = payload.result;
-          } else if (payload.token) {
-            onToken(payload.token);
-          }
-        }
-      }
-
-      return finalResult;
     }
     
     // 滚动到底部
@@ -230,9 +143,12 @@
               }
             }
             
+            // 处理建议卡片的解锁
             if (index === 4) {
-              if (data.ready_for_suggestion === true) {
+              if (data.ready_for_suggestion === true && card.content) {
                 cardElement.classList.remove('locked');
+              } else {
+                cardElement.classList.add('locked');
               }
             }
           }
@@ -240,97 +156,76 @@
       }
     }
     
-    async function tryResumeSession(decodedQuestion) {
-      try {
-        const memResp = await fetch('/api/memory');
-        if (!memResp.ok) return false;
-        const memory = await memResp.json();
-        if (!Array.isArray(memory) || memory.length === 0) return false;
-
-        const firstUserMsg = memory.find(m => m.role === 'user');
-        if (!firstUserMsg || firstUserMsg.content !== decodedQuestion) return false;
-
-        memory.forEach(m => addMessage(m.content, m.role === 'user' ? 'user' : 'ai'));
-
-        const lastReply = [...memory].reverse().find(m => m.role === 'assistant');
-        if (lastReply) {
-          try {
-            const data = JSON.parse(lastReply.content.replace(/```json\n?/g, '').replace(/```/g, ''));
-            updateCards(data);
-          } catch {
-            updateCards({
-              cards: { surface: '会话已恢复', assumption: '', info_gap: '', blind_spot: '', suggestion: '' },
-              ready_for_suggestion: false
-            });
-          }
-        }
-        return true;
-      } catch {
-        return false;
-      }
-    }
-
+    // 页面初始化
     async function initPage() {
       const question = getQueryParam('question');
       if (question) {
         const decodedQuestion = decodeURIComponent(question);
-
-        const sessionKey = 'mindlens_active_question';
-        const isRefresh = sessionStorage.getItem(sessionKey) === decodedQuestion;
-
-        if (isRefresh) {
-          showStatusMessage('正在恢复会话...');
-          const resumed = await tryResumeSession(decodedQuestion);
-          hideStatusMessage();
-          if (resumed) return;
-        }
-
-        sessionStorage.setItem(sessionKey, decodedQuestion);
+        document.getElementById('displayQuestion').textContent = decodedQuestion;
+        
+        // 显示初始问题
         addMessage(decodedQuestion, 'user');
+        
+        // 显示系统提示
         showStatusMessage('Mind Lens 正在对该问题进行初始对焦...');
-
-        initPlaceholderCards();
-
+        
+        // 显示加载状态
+        const container = document.getElementById('analysis-container');
+        container.innerHTML = '<div style="text-align: center; padding: 2rem; color: #888;">正在分析...请稍候</div>';
+        
         try {
-          let rawText = '';
-          let rafPending = false;
-          const data = await consumeSSE(
-            '/api/analysis/start',
-            { question: decodedQuestion },
-            (token) => {
-              rawText += token;
-              if (!rafPending) {
-                rafPending = true;
-                requestAnimationFrame(() => {
-                  updateStreamingCards(extractPartialCards(rawText));
-                  rafPending = false;
-                });
-              }
-            }
-          );
-
-          hideStatusMessage();
-          if (data) {
-            updateCards(data);
-            if (data.follow_up) {
-              addMessage(data.follow_up, 'ai');
-              document.getElementById('skip-btn').style.display = '';
-            }
-            if (data.ready_for_suggestion) {
-              document.getElementById('skip-btn').style.display = 'none';
-            }
+          // 发起首轮分析
+          const response = await fetch('/api/analysis/start', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ question: decodedQuestion })
+          });
+          
+          if (!response.ok) {
+            throw new Error('分析启动失败');
           }
-
-        } catch (error) {
-          console.error('启动分析错误:', error);
+          
+          const data = await response.json();
+          
+          // 隐藏状态消息
           hideStatusMessage();
-
+          
+          // 更新卡片
+          updateCards(data);
+          
+          // 处理追问
+          if (data.follow_up) {
+            addMessage(data.follow_up, 'ai');
+          }
+          
+        } catch (error) {
+          console.log('后端未连接，仅展示 UI 效果');
+          console.error('启动分析错误:', error);
+          
+          // 隐藏状态消息
+          hideStatusMessage();
+          
+          // 显示错误提示
           const chatMessages = document.querySelector('.chat-messages');
           const errorDiv = document.createElement('div');
           errorDiv.className = 'error-message';
-          errorDiv.innerHTML = `<p>${error.message || '后端服务暂时不可用'}</p>`;
+          errorDiv.innerHTML = '<p style="color: #e74c3c;">后端服务暂时不可用，仅展示默认分析结果</p>';
           chatMessages.appendChild(errorDiv);
           scrollToBottom();
+          
+          // 显示默认分析结果
+          updateCards({
+            cards: {
+              surface: '这是对用户输入问题的表层描述和理解，帮助你明确问题的基本含义和范围。',
+              assumption: '分析问题中可能存在的隐含假设和前提条件，帮助你识别潜在的思维局限。',
+              info_gap: '指出问题描述中可能缺少的关键信息，帮助你完善问题的理解。',
+              blind_spot: '分析可能存在的认知偏见或盲点，帮助你从不同角度思考问题。',
+              suggestion: '基于分析提供的具体建议和改进方向，帮助你找到解决问题的思路。'
+            },
+            ready_for_suggestion: false
+          });
         }
       }
     }
@@ -357,53 +252,58 @@
         sendBtn.disabled = true;
         
         try {
-          let rawText = '';
-          let rafPending = false;
-          const data = await consumeSSE(
-            '/api/analysis/reply',
-            { message: reply },
-            (token) => {
-              rawText += token;
-              if (!rafPending) {
-                rafPending = true;
-                requestAnimationFrame(() => {
-                  updateStreamingCards(extractPartialCards(rawText));
-                  rafPending = false;
-                });
-              }
-            }
-          );
-
+          // 发起接口请求
+          const response = await fetch('/api/analysis/reply', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+              message: reply, 
+              prompt_name: 'mind_lens', 
+              stream: false 
+            })
+          });
+          
+          if (!response.ok) {
+            throw new Error('回复发送失败');
+          }
+          
+          const data = await response.json();
+          
+          // 隐藏状态消息
           hideStatusMessage();
-
-          if (data && data.error) {
+          
+          // 处理错误
+          if (data.error) {
             const chatMessages = document.querySelector('.chat-messages');
             const errorDiv = document.createElement('div');
             errorDiv.className = 'error-message';
             errorDiv.innerHTML = `<p style="color: #e74c3c;">${data.error}</p>`;
             chatMessages.appendChild(errorDiv);
             scrollToBottom();
-          } else if (data) {
+          } else {
+            // 更新卡片
             updateCards(data);
+            
+            // 处理追问
             if (data.follow_up) {
               addMessage(data.follow_up, 'ai');
-              document.getElementById('skip-btn').style.display = '';
-            }
-            if (data.ready_for_suggestion) {
-              document.getElementById('skip-btn').style.display = 'none';
             }
           }
           
         } catch (error) {
+          console.log('后端未连接，仅展示 UI 效果');
           console.error('发送回复错误:', error);
           
+          // 隐藏状态消息
           hideStatusMessage();
           
+          // 显示错误提示
           const chatMessages = document.querySelector('.chat-messages');
           const errorDiv = document.createElement('div');
           errorDiv.className = 'error-message';
-          const errMsg = error.message || '后端服务暂时不可用，无法处理你的回复';
-          errorDiv.innerHTML = `<p>${errMsg}</p>`;
+          errorDiv.innerHTML = '<p style="color: #e74c3c;">后端服务暂时不可用，无法处理你的回复</p>';
           chatMessages.appendChild(errorDiv);
           scrollToBottom();
         } finally {
@@ -414,22 +314,15 @@
       }
     }
 
-    async function skipToSuggestion() {
-      const userReply = document.getElementById('user-reply');
-      userReply.value = '[请直接给出建议]';
-      await sendReply();
-      document.getElementById('skip-btn').style.display = 'none';
-    }
-
     document.addEventListener('DOMContentLoaded', function() {
+      // 初始化页面
       initPage();
       
+      // 绑定发送按钮事件
       const sendBtn = document.getElementById('send-btn');
-      const skipBtn = document.getElementById('skip-btn');
       const userReply = document.getElementById('user-reply');
       
       sendBtn.addEventListener('click', sendReply);
-      skipBtn.addEventListener('click', skipToSuggestion);
       
       // 支持快捷键：Enter 发送，Shift+Enter 换行
       userReply.addEventListener('keydown', function(e) {

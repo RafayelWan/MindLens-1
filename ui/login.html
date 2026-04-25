@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mind Lens - 登录/注册</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* 登录页面特有样式 */
+    .login-container {
+      max-width: 500px;
+      margin: 0 auto;
+      padding: 4rem;
+      background: rgba(255, 253, 247, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      border-radius: 20px;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      animation: gentlePulse 4s ease-in-out infinite;
+    }
+
+    @keyframes gentlePulse {
+      0%, 100% {
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+        transform: translateY(0);
+      }
+      50% {
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+        transform: translateY(-2px);
+      }
+    }
+
+    .login-container:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.06);
+    }
+
+    .login-container h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      color: #3a3a3a;
+      font-weight: 400;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      font-family: Georgia, 'Playfair Display', 'Times New Roman', serif;
+    }
+
+    .login-container .subtitle {
+      font-size: 1.1rem;
+      margin-bottom: 2.5rem;
+      color: #7a7a7a;
+      font-weight: 300;
+      line-height: 1.5;
+    }
+
+    .form-group {
+      width: 100%;
+      margin-bottom: 2rem;
+      text-align: left;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 1.35rem;
+      border: 1px solid rgba(200, 190, 175, 0.3);
+      border-radius: 16px;
+      font-family: inherit;
+      font-size: 1.05rem;
+      background: rgba(255, 252, 245, 0.8);
+      backdrop-filter: blur(8px);
+      transition: all 0.3s ease;
+      color: #333;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: rgba(120, 144, 156, 0.3);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02), 0 0 0 3px rgba(120, 144, 156, 0.1);
+      background: rgba(255, 252, 245, 0.9);
+    }
+
+    .form-btn {
+      width: 100%;
+      padding: 1.35rem;
+      background: #8B9DC3;
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      font-size: 1.1rem;
+      font-weight: 400;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(139, 157, 195, 0.15);
+      letter-spacing: 0.5px;
+      margin-top: 2rem;
+    }
+
+    .form-btn:hover {
+      background: #7A8BB8;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(139, 157, 195, 0.2);
+    }
+
+    .form-btn:active {
+      transform: translateY(0);
+      box-shadow: 0 4px 12px rgba(139, 157, 195, 0.15);
+    }
+
+    .form-btn:disabled {
+      background: #c0c7d6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .mode-toggle {
+      margin-top: 1.5rem;
+      font-size: 0.9rem;
+      color: #7a7a7a;
+    }
+
+    .mode-toggle a {
+      color: #8B9DC3;
+      text-decoration: none;
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+
+    .mode-toggle a:hover {
+      color: #7A8BB8;
+      text-decoration: underline;
+    }
+
+    /* 表单模式切换动画 */
+    .form-mode {
+      width: 100%;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* 垂直居中布局 */
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    /* 过渡动画层 */
+    #transition-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(
+        circle at center,
+        rgba(234,243,255,0.25) 0%,
+        rgba(255,255,255,0.12) 40%,
+        rgba(255,255,255,0) 75%
+      );
+      transition: opacity 0.5s ease;
+      z-index: 9999;
+    }
+
+    #transition-layer.active {
+      opacity: 1;
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .login-container {
+        max-width: 90%;
+        padding: 30px;
+      }
+
+      .login-container h1 {
+        font-size: 2.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 过渡动画层 -->
+  <div id="transition-layer"></div>
+  
+  <div class="login-container">
+    <h1>Mind Lens</h1>
+    <p class="subtitle">记录你的思考轨迹，而不是替你做决定</p>
+
+    <!-- 登录模式 -->
+    <div id="login-mode" class="form-mode">
+      <div class="form-group">
+        <input type="email" id="login-email" class="form-input" placeholder="邮箱">
+      </div>
+      <div class="form-group">
+        <input type="password" id="login-password" class="form-input" placeholder="密码">
+      </div>
+      <button id="login-btn" class="form-btn" onclick="handleLogin()">登录</button>
+      <div class="mode-toggle">
+        没有账号？<a onclick="switchToRegister()">去注册</a>
+      </div>
+    </div>
+
+    <!-- 注册模式 -->
+    <div id="register-mode" class="form-mode" style="display: none;">
+      <div class="form-group">
+        <input type="text" id="register-name" class="form-input" placeholder="昵称">
+      </div>
+      <div class="form-group">
+        <input type="email" id="register-email" class="form-input" placeholder="邮箱">
+      </div>
+      <div class="form-group">
+        <input type="password" id="register-password" class="form-input" placeholder="密码">
+      </div>
+      <button id="register-btn" class="form-btn" onclick="handleRegister()">注册</button>
+      <div class="mode-toggle">
+        已有账号？<a onclick="switchToLogin()">去登录</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 切换到登录模式
+    function switchToLogin() {
+      document.getElementById('register-mode').style.display = 'none';
+      document.getElementById('login-mode').style.display = 'block';
+    }
+
+    // 切换到注册模式
+    function switchToRegister() {
+      document.getElementById('login-mode').style.display = 'none';
+      document.getElementById('register-mode').style.display = 'block';
+    }
+
+    // 处理登录
+    async function handleLogin() {
+      const email = document.getElementById('login-email').value.trim();
+      const password = document.getElementById('login-password').value;
+      const loginBtn = document.getElementById('login-btn');
+
+      if (!email || !password) {
+        alert('请输入邮箱和密码');
+        return;
+      }
+
+      // 设置加载状态
+      loginBtn.disabled = true;
+      loginBtn.textContent = '处理中...';
+
+      try {
+        // 模拟登录成功
+        const data = {
+          user_id: "user_" + Date.now(),
+          name: email.split('@')[0]
+        };
+
+        // 存储用户信息
+        localStorage.setItem("user_id", data.user_id);
+        localStorage.setItem("user_name", data.name);
+
+        // 激活动画
+        const transitionLayer = document.getElementById('transition-layer');
+        transitionLayer.classList.add('active');
+
+        // 延迟跳转到主页面
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 500);
+      } catch (error) {
+        alert('登录失败，请稍后重试');
+        console.error('登录错误:', error);
+      } finally {
+        // 恢复按钮状态
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登录';
+      }
+    }
+
+    // 处理注册
+    async function handleRegister() {
+      const name = document.getElementById('register-name').value.trim();
+      const email = document.getElementById('register-email').value.trim();
+      const password = document.getElementById('register-password').value;
+      const registerBtn = document.getElementById('register-btn');
+
+      if (!name || !email || !password) {
+        alert('请填写所有字段');
+        return;
+      }
+
+      // 设置加载状态
+      registerBtn.disabled = true;
+      registerBtn.textContent = '处理中...';
+
+      try {
+        // 模拟注册成功
+        const data = {
+          user_id: "user_" + Date.now(),
+          name: name
+        };
+
+        // 存储用户信息
+        localStorage.setItem("user_id", data.user_id);
+        localStorage.setItem("user_name", data.name);
+
+        // 激活动画
+        const transitionLayer = document.getElementById('transition-layer');
+        transitionLayer.classList.add('active');
+
+        // 延迟跳转到主页面
+        setTimeout(() => {
+          window.location.href = "index.html";
+        }, 500);
+      } catch (error) {
+        alert('注册失败，请稍后重试');
+        console.error('注册错误:', error);
+      } finally {
+        // 恢复按钮状态
+        registerBtn.disabled = false;
+        registerBtn.textContent = '注册';
+      }
+    }
+
+    // 按下回车键触发登录/注册
+    document.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        if (document.getElementById('login-mode').style.display !== 'none') {
+          handleLogin();
+        } else if (document.getElementById('register-mode').style.display !== 'none') {
+          handleRegister();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

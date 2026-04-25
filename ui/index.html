@@ -4,54 +4,489 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mind Lens</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* 页面淡入动画 */
+    body {
+      opacity: 0;
+      animation: fadeIn 0.5s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    /* 随手记功能 */
+    .history-button {
+      position: fixed;
+      top: 2rem;
+      left: 2rem;
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #8B9DC3;
+      color: white;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(139, 157, 195, 0.2);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .history-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(139, 157, 195, 0.3);
+    }
+
+    .notes-button {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #8B9DC3;
+      color: white;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(139, 157, 195, 0.2);
+      transition: all 0.3s ease;
+      z-index: 1000;
+    }
+
+    .notes-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(139, 157, 195, 0.3);
+    }
+
+    .history-drawer {
+      position: fixed;
+      top: 0;
+      left: -400px;
+      width: 350px;
+      height: 100vh;
+      background: rgba(255, 253, 247, 0.95);
+      backdrop-filter: blur(12px);
+      border-right: 1px solid rgba(200, 190, 175, 0.3);
+      box-shadow: 4px 0 20px rgba(0, 0, 0, 0.05);
+      transition: left 0.3s ease;
+      z-index: 1001;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .history-drawer.open {
+      left: 0;
+    }
+
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(200, 190, 175, 0.3);
+    }
+
+    .history-header h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      color: #3a3a3a;
+      font-weight: 400;
+      font-family: Georgia, 'Playfair Display', 'Times New Roman', serif;
+    }
+
+    .history-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #7a7a7a;
+      transition: color 0.3s ease;
+    }
+
+    .history-close:hover {
+      color: #3a3a3a;
+    }
+
+    .history-content {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .notes-drawer {
+      position: fixed;
+      top: 0;
+      right: -400px;
+      width: 350px;
+      height: 100vh;
+      background: rgba(255, 253, 247, 0.95);
+      backdrop-filter: blur(12px);
+      border-left: 1px solid rgba(200, 190, 175, 0.3);
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
+      transition: right 0.3s ease;
+      z-index: 1001;
+      display: flex;
+      flex-direction: column;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .notes-drawer.open {
+      right: 0;
+    }
+
+    .notes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(200, 190, 175, 0.3);
+    }
+
+    .notes-header h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      color: #3a3a3a;
+      font-weight: 400;
+      font-family: Georgia, 'Playfair Display', 'Times New Roman', serif;
+    }
+
+    .notes-close {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #7a7a7a;
+      transition: color 0.3s ease;
+    }
+
+    .notes-close:hover {
+      color: #3a3a3a;
+    }
+
+    .notes-input-section {
+      margin-bottom: 2rem;
+    }
+
+    .notes-textarea {
+      width: 100%;
+      padding: 1rem;
+      border: 1px solid rgba(200, 190, 175, 0.3);
+      border-radius: 12px;
+      resize: vertical;
+      min-height: 120px;
+      font-family: inherit;
+      font-size: 1rem;
+      background: rgba(255, 252, 245, 0.8);
+      backdrop-filter: blur(8px);
+      transition: all 0.3s ease;
+      color: #333;
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    .notes-textarea:focus {
+      outline: none;
+      border-color: rgba(120, 144, 156, 0.3);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.02), 0 0 0 3px rgba(120, 144, 156, 0.1);
+      background: rgba(255, 252, 245, 0.9);
+    }
+
+    .notes-save-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: #8B9DC3;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 400;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(139, 157, 195, 0.15);
+      margin-top: 1rem;
+    }
+
+    .notes-save-btn:hover {
+      background: #7A8BB8;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(139, 157, 195, 0.2);
+    }
+
+    .notes-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .notes-list h4 {
+      margin: 0 0 1rem 0;
+      font-size: 1rem;
+      color: #555;
+      font-weight: 400;
+    }
+
+    .note-item {
+      padding: 1rem;
+      background: rgba(255, 252, 245, 0.8);
+      border: 1px solid rgba(200, 190, 175, 0.3);
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    .note-item:hover {
+      background: rgba(255, 252, 245, 0.9);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .note-text {
+      color: #555;
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .note-time {
+      color: #888;
+      font-size: 0.8rem;
+      line-height: 1.4;
+    }
+
+    .no-notes {
+      color: #888;
+      text-align: center;
+      padding: 2rem;
+      font-style: italic;
+    }
+
+    /* 滚动条样式 */
+    .notes-drawer::-webkit-scrollbar,
+    .notes-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .notes-drawer::-webkit-scrollbar-track,
+    .notes-list::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+    }
+
+    .notes-drawer::-webkit-scrollbar-thumb,
+    .notes-list::-webkit-scrollbar-thumb {
+      background: rgba(139, 157, 195, 0.3);
+      border-radius: 3px;
+    }
+
+    .notes-drawer::-webkit-scrollbar-thumb:hover,
+    .notes-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(139, 157, 195, 0.5);
+    }
+
+    /* 用户事实信息面板 */
+    .user-facts-panel {
+      background: rgba(255, 253, 247, 0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(200, 190, 175, 0.3);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .user-facts-panel h3 {
+      margin: 0 0 1rem 0;
+      font-size: 1.1rem;
+      color: #3a3a3a;
+      font-weight: 400;
+      font-family: Georgia, 'Playfair Display', 'Times New Roman', serif;
+    }
+
+    .facts-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .fact-tag {
+      background: rgba(139, 157, 195, 0.15);
+      border: 1px solid rgba(139, 157, 195, 0.3);
+      border-radius: 20px;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      color: #555;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .fact-tag:hover {
+      background: rgba(139, 157, 195, 0.25);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(139, 157, 195, 0.15);
+    }
+
+    .fact-tag .fact-type {
+      font-size: 0.8rem;
+      color: #8B9DC3;
+      font-weight: 400;
+    }
+
+    .fact-tag .fact-value {
+      font-weight: 400;
+    }
+
+    /* 思维变化记录模块 */
+    .thoughts-timeline {
+      background: rgba(255, 253, 247, 0.7);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(200, 190, 175, 0.3);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-top: 2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .thoughts-timeline h3 {
+      margin: 0 0 1.5rem 0;
+      font-size: 1.1rem;
+      color: #3a3a3a;
+      font-weight: 400;
+      font-family: Georgia, 'Playfair Display', 'Times New Roman', serif;
+    }
+
+    .timeline-container {
+      position: relative;
+      padding-left: 2rem;
+    }
+
+    .timeline-container::before {
+      content: '';
+      position: absolute;
+      left: 0.5rem;
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: rgba(139, 157, 195, 0.3);
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(200, 190, 175, 0.2);
+    }
+
+    .timeline-item:last-child {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -2rem;
+      top: 0.5rem;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #8B9DC3;
+      border: 2px solid rgba(255, 253, 247, 0.9);
+      box-shadow: 0 0 0 2px rgba(139, 157, 195, 0.3);
+    }
+
+    .timeline-time {
+      font-size: 0.9rem;
+      color: #8B9DC3;
+      font-weight: 400;
+      margin-bottom: 0.5rem;
+    }
+
+    .timeline-text {
+      font-size: 0.95rem;
+      color: #555;
+      line-height: 1.5;
+      background: rgba(255, 252, 245, 0.8);
+      border: 1px solid rgba(200, 190, 175, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .timeline-text:hover {
+      background: rgba(255, 252, 245, 0.9);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.04);
+    }
+  </style>
 </head>
 <body>
-  <div class="index-container">
-    <button id="api-key-btn" class="api-key-btn" onclick="openApiKeyModal()">填写 API Key</button>
-    <h1>Mind Lens</h1>
-    <p class="subtitle">帮助你更清晰的理解和分析问题</p>
-
-    <!-- API Key 弹窗 -->
-    <div id="api-key-modal" class="modal-overlay" style="display:none;">
-      <div class="modal-content">
-        <h3>配置 API</h3>
-        <p class="modal-hint">只支持 OpenAI 兼容格式的 API</p>
-        <div class="modal-field">
-          <label for="api-url-input">API URL</label>
-          <input type="text" id="api-url-input" placeholder="https://api.openai.com/v1" />
-        </div>
-        <div class="modal-field">
-          <label for="api-key-input">API Key</label>
-          <input type="password" id="api-key-input" placeholder="sk-..." />
-        </div>
-        <div class="modal-field">
-          <label for="api-model-input">模型名称</label>
-          <input type="text" id="api-model-input" placeholder="gpt-4o / deepseek-chat / ..." />
-        </div>
-        <p id="api-save-error" class="modal-error"></p>
-        <div class="modal-actions">
-          <button class="modal-cancel-btn" onclick="closeApiKeyModal()">取消</button>
-          <button class="modal-save-btn" onclick="saveApiKey()">保存</button>
-        </div>
+  <!-- 历史记录抽屉 -->
+  <div class="history-drawer" id="historyDrawer">
+    <div class="history-header">
+      <h3>历史记录</h3>
+      <button class="history-close" onclick="toggleHistoryDrawer()">×</button>
+    </div>
+    <div class="history-content">
+      <div id="history-list" class="history-list">
+        <!-- 历史记录将在这里显示 -->
       </div>
     </div>
+  </div>
+
+  <!-- 历史记录按钮 -->
+  <button class="history-button" onclick="toggleHistoryDrawer()">📖</button>
+  
+  <!-- 随手记按钮 -->
+  <button class="notes-button" onclick="toggleNotes()">📝</button>
+  
+  <!-- 随手记抽屉 -->
+  <div class="notes-drawer" id="notesDrawer">
+    <div class="notes-header">
+      <h3>随手记</h3>
+      <button class="notes-close" onclick="toggleNotes()">×</button>
+    </div>
+    <div class="notes-input-section">
+      <textarea class="notes-textarea" id="notesInput" placeholder="记录你的想法..."></textarea>
+      <button class="notes-save-btn" onclick="saveNote()">保存</button>
+    </div>
+    <div class="notes-list">
+      <h4>历史记录</h4>
+      <div id="notesList"></div>
+    </div>
+  </div>
+  
+  <div class="index-container">
+    <h1>Mind Lens</h1>
+    <p class="subtitle">帮助你更清晰的理解和分析问题</p>
     
+    <!-- 用户事实信息面板 -->
+    <div class="user-facts-panel">
+      <h3>用户画像</h3>
+      <div class="facts-tags" id="userFacts"></div>
+    </div>
+
     <div class="input-section">
       <label for="question">写下你正在困扰的问题</label>
       <textarea id="question" placeholder="例如：如何平衡工作和生活的关系？"></textarea>
       <button class="btn" onclick="analyzeQuestion()">分析问题</button>
     </div>
     
-    <!-- 历史记录功能 -->
-    <div class="history-section">
-      <button class="history-toggle" onclick="toggleHistory()">历史记录</button>
-      <div id="history-container" class="history-container">
-        <h3>历史问题</h3>
-        <div id="history-list" class="history-list">
-          <!-- 历史记录将在这里显示 -->
-        </div>
-      </div>
+
+
+    <!-- 思维变化记录模块 -->
+    <div class="thoughts-timeline">
+      <h3>思维变化轨迹</h3>
+      <div class="timeline-container" id="thoughtsTimeline"></div>
     </div>
   </div>
   
@@ -99,19 +534,17 @@
       const history = JSON.parse(localStorage.getItem('mindLensHistory') || '[]');
       if (history[index]) {
         document.getElementById('question').value = history[index].question;
-        // 收起历史记录
-        document.getElementById('history-container').style.display = 'none';
+        // 收起历史记录抽屉
+        toggleHistoryDrawer();
       }
     }
     
-    // 切换历史记录显示/隐藏
-    function toggleHistory() {
-      const historyContainer = document.getElementById('history-container');
-      if (historyContainer.style.display === 'none' || historyContainer.style.display === '') {
-        historyContainer.style.display = 'block';
+    // 切换历史记录抽屉显示/隐藏
+    function toggleHistoryDrawer() {
+      const drawer = document.getElementById('historyDrawer');
+      drawer.classList.toggle('open');
+      if (drawer.classList.contains('open')) {
         loadHistory();
-      } else {
-        historyContainer.style.display = 'none';
       }
     }
     
@@ -127,88 +560,137 @@
       window.location.href = `result.html?question=${encodeURIComponent(question)}`;
     }
     
-    function openApiKeyModal() {
-      document.getElementById('api-url-input').value = '';
-      document.getElementById('api-key-input').value = '';
-      document.getElementById('api-model-input').value = '';
-      document.getElementById('api-save-error').textContent = '';
-      document.getElementById('api-key-modal').style.display = 'flex';
+    // 切换笔记抽屉显示/隐藏
+    function toggleNotes() {
+      const drawer = document.getElementById('notesDrawer');
+      drawer.classList.toggle('open');
+      if (drawer.classList.contains('open')) {
+        loadNotes();
+      }
     }
 
-    function closeApiKeyModal() {
-      document.getElementById('api-key-modal').style.display = 'none';
-    }
-
-    async function saveApiKey() {
-      const url = document.getElementById('api-url-input').value.trim() || 'https://api.openai.com/v1';
-      const key = document.getElementById('api-key-input').value.trim();
-      const model = document.getElementById('api-model-input').value.trim() || 'gpt-4o';
-      const errorEl = document.getElementById('api-save-error');
-      errorEl.textContent = '';
-
-      if (!key) {
-        document.getElementById('api-key-input').focus();
+    // 保存笔记
+    function saveNote() {
+      const text = document.getElementById('notesInput').value.trim();
+      if (!text) {
         return;
       }
 
-      const saveBtn = document.querySelector('.modal-save-btn');
-      saveBtn.disabled = true;
-      saveBtn.textContent = '保存中...';
+      // 获取用户ID
+      const userId = localStorage.getItem('user_id') || 'guest';
+      const notesKey = `user_notes_${userId}`;
 
-      try {
-        const resp = await fetch('/api/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ api_key: key, api_url: url, model: model }),
-        });
+      // 加载现有笔记
+      const notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
 
-        if (!resp.ok) {
-          const data = await resp.json().catch(() => ({}));
-          throw new Error(data.detail || '保存失败');
-        }
+      // 添加新笔记
+      const newNote = {
+        text: text,
+        time: Date.now()
+      };
 
-        updateApiKeyBtn(true);
-        closeApiKeyModal();
-      } catch (err) {
-        errorEl.textContent = err.message;
-      } finally {
-        saveBtn.disabled = false;
-        saveBtn.textContent = '保存';
-      }
+      notes.unshift(newNote);
+
+      // 保存回 localStorage
+      localStorage.setItem(notesKey, JSON.stringify(notes));
+
+      // 清空输入框
+      document.getElementById('notesInput').value = '';
+
+      // 刷新笔记列表
+      loadNotes();
     }
 
-    function updateApiKeyBtn(configured) {
-      const btn = document.getElementById('api-key-btn');
-      if (configured) {
-        btn.textContent = 'API Key ✓';
-        btn.classList.add('configured');
-      } else {
-        btn.textContent = '填写 API Key';
-        btn.classList.remove('configured');
+    // 加载笔记历史
+    function loadNotes() {
+      // 获取用户ID
+      const userId = localStorage.getItem('user_id') || 'guest';
+      const notesKey = `user_notes_${userId}`;
+
+      // 加载笔记
+      const notes = JSON.parse(localStorage.getItem(notesKey) || '[]');
+      const notesList = document.getElementById('notesList');
+
+      if (notes.length === 0) {
+        notesList.innerHTML = '<p class="no-notes">暂无笔记</p>';
+        return;
       }
-    }
 
-    async function checkApiConfig() {
-      try {
-        const resp = await fetch('/api/config/status');
-        const data = await resp.json();
-        updateApiKeyBtn(data.configured);
-        if (data.server_provided) {
-          document.getElementById('api-key-btn').style.display = 'none';
-        }
-      } catch {
-        updateApiKeyBtn(false);
-      }
-    }
+      // 按时间倒序排列
+      notes.sort((a, b) => b.time - a.time);
 
-    window.onload = function() {
-      document.getElementById('history-container').style.display = 'none';
-
-      document.getElementById('api-key-modal').addEventListener('click', function(e) {
-        if (e.target === this) closeApiKeyModal();
+      // 渲染笔记列表
+      notesList.innerHTML = '';
+      notes.forEach(note => {
+        const noteItem = document.createElement('div');
+        noteItem.className = 'note-item';
+        
+        const date = new Date(note.time);
+        const timeString = date.toLocaleString();
+        
+        noteItem.innerHTML = `
+          <p class="note-text">${note.text}</p>
+          <p class="note-time">${timeString}</p>
+        `;
+        notesList.appendChild(noteItem);
       });
+    }
 
-      checkApiConfig();
+    // 加载用户事实信息
+    function loadUserFacts() {
+      // 使用 mock 数据
+      const mockFacts = [
+        { type: "身份", value: "学生" },
+        { type: "状态", value: "焦虑" },
+        { type: "目标", value: "做产品" },
+        { type: "特征", value: "喜欢思考" }
+      ];
+
+      const factsContainer = document.getElementById('userFacts');
+      factsContainer.innerHTML = '';
+
+      mockFacts.forEach(fact => {
+        const factTag = document.createElement('div');
+        factTag.className = 'fact-tag';
+        factTag.innerHTML = `
+          <span class="fact-type">${fact.type}</span>
+          <span class="fact-value">${fact.value}</span>
+        `;
+        factsContainer.appendChild(factTag);
+      });
+    }
+
+    // 加载思维变化记录
+    function loadThoughtsTimeline() {
+      // 使用 mock 数据
+      const mockThoughts = [
+        { time: "Day 1", text: "想辞职，工作压力太大" },
+        { time: "Day 3", text: "开始犹豫，担心找不到更好的工作" },
+        { time: "Day 5", text: "和朋友交流后，决定先提升自己" },
+        { time: "Today", text: "制定了学习计划，准备在职提升技能" }
+      ];
+
+      const timelineContainer = document.getElementById('thoughtsTimeline');
+      timelineContainer.innerHTML = '';
+
+      mockThoughts.forEach(thought => {
+        const timelineItem = document.createElement('div');
+        timelineItem.className = 'timeline-item';
+        timelineItem.innerHTML = `
+          <div class="timeline-time">${thought.time}</div>
+          <div class="timeline-text">${thought.text}</div>
+        `;
+        timelineContainer.appendChild(timelineItem);
+      });
+    }
+
+    // 页面加载时初始化
+    window.onload = function() {
+      // 加载用户事实信息
+      loadUserFacts();
+      
+      // 加载思维变化记录
+      loadThoughtsTimeline();
     };
   </script>
 </body>
