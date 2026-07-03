@@ -1,7 +1,11 @@
 {
-  "buildCommand": "",
-  "outputDirectory": "ui",
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" }
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "builds": [
+    { "src": "ui/**", "use": "@vercel/static" },
+    { "src": "api/index.py", "use": "@vercel/python" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "src": "/(.*)", "dest": "/ui/$1" }
   ]
 }
