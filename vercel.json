@@ -1,0 +1,7 @@
+{
+  "buildCommand": "",
+  "outputDirectory": "ui",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.py" }
+  ]
+}

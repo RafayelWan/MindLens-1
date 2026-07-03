@@ -214,42 +214,11 @@
         <input type="password" id="login-password" class="form-input" placeholder="密码">
       </div>
       <button id="login-btn" class="form-btn" onclick="handleLogin()">登录</button>
-      <div class="mode-toggle">
-        没有账号？<a onclick="switchToRegister()">去注册</a>
-      </div>
     </div>
 
-    <!-- 注册模式 -->
-    <div id="register-mode" class="form-mode" style="display: none;">
-      <div class="form-group">
-        <input type="text" id="register-name" class="form-input" placeholder="昵称">
-      </div>
-      <div class="form-group">
-        <input type="email" id="register-email" class="form-input" placeholder="邮箱">
-      </div>
-      <div class="form-group">
-        <input type="password" id="register-password" class="form-input" placeholder="密码">
-      </div>
-      <button id="register-btn" class="form-btn" onclick="handleRegister()">注册</button>
-      <div class="mode-toggle">
-        已有账号？<a onclick="switchToLogin()">去登录</a>
-      </div>
-    </div>
   </div>
 
   <script>
-    // 切换到登录模式
-    function switchToLogin() {
-      document.getElementById('register-mode').style.display = 'none';
-      document.getElementById('login-mode').style.display = 'block';
-    }
-
-    // 切换到注册模式
-    function switchToRegister() {
-      document.getElementById('login-mode').style.display = 'none';
-      document.getElementById('register-mode').style.display = 'block';
-    }
-
     function _afterAuth(data) {
       localStorage.setItem("user_id", data.user_id);
       localStorage.setItem("user_name", data.name);
@@ -262,79 +231,27 @@
     async function handleLogin() {
       const email = document.getElementById('login-email').value.trim();
       const password = document.getElementById('login-password').value;
-      const loginBtn = document.getElementById('login-btn');
 
       if (!email || !password) { alert('请输入邮箱和密码'); return; }
 
+      const loginBtn = document.getElementById('login-btn');
       loginBtn.disabled = true;
       loginBtn.textContent = '处理中...';
 
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          alert(err.detail || '登录失败');
-          return;
-        }
-        const data = await res.json();
-        data.email = email;
-        _afterAuth(data);
-      } catch (error) {
-        alert('登录失败，请稍后重试');
-        console.error('登录错误:', error);
-      } finally {
-        loginBtn.disabled = false;
-        loginBtn.textContent = '登录';
-      }
+      _afterAuth({user_id: 'demo', name: 'Demo 用户', email: email});
     }
 
-    async function handleRegister() {
-      const name = document.getElementById('register-name').value.trim();
-      const email = document.getElementById('register-email').value.trim();
-      const password = document.getElementById('register-password').value;
-      const registerBtn = document.getElementById('register-btn');
-
-      if (!name || !email || !password) { alert('请填写所有字段'); return; }
-
-      registerBtn.disabled = true;
-      registerBtn.textContent = '处理中...';
-
-      try {
-        const res = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, name, password })
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          alert(err.detail || '注册失败');
-          return;
-        }
-        const data = await res.json();
-        data.email = email;
-        _afterAuth(data);
-      } catch (error) {
-        alert('注册失败，请稍后重试');
-        console.error('注册错误:', error);
-      } finally {
-        registerBtn.disabled = false;
-        registerBtn.textContent = '注册';
-      }
-    }
-
-    // 按下回车键触发登录/注册
+    // 按下回车键触发登录
     document.addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
-        if (document.getElementById('login-mode').style.display !== 'none') {
-          handleLogin();
-        } else if (document.getElementById('register-mode').style.display !== 'none') {
-          handleRegister();
-        }
+        handleLogin();
       }
+    });
+
+    // 页面加载时自动填入 demo 数据
+    window.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('login-email').value = 'demo@mindlens.app';
+      document.getElementById('login-password').value = 'demo123';
     });
   </script>
 </body>
